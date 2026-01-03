@@ -2,350 +2,160 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Priority Dashboard - Full Data</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ยินดีต้อนรับ - PCK LAB</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
-        .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid #e2e8f0; }
-        table { min-width: 700px; width: 100%; }
-        th { position: sticky; top: 0; background: #f1f5f9; z-index: 10; padding: 12px; }
-        td { padding: 12px; border-bottom: 1px solid #f1f5f9; }
-        select { font-size: 16px !important; } /* ป้องกัน iPhone Zoom อัตโนมัติ */
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background-color: #f1f5f9; 
+            margin: 0;
+            overflow: hidden; /* ป้องกันการเลื่อนหน้าจอเกินจำเป็น */
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* ปุ่มเปิด Sidebar - ยึดไว้มุมซ้ายบน */
+        .menu-toggle-btn {
+            position: fixed;
+            top: 25px;
+            left: 25px;
+            z-index: 100;
+            background: white;
+            padding: 14px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+        .menu-toggle-btn:hover { transform: scale(1.05); background: #f8fafc; }
+
+        /* การจัดการ Sidebar */
+        #sidebar-container {
+            position: fixed;
+            top: 0;
+            left: -320px; 
+            width: 320px;
+            height: 100vh;
+            background: white;
+            z-index: 90;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid #e2e8f0;
+        }
+        #sidebar-container.active { left: 0; }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            z-index: 80;
+        }
+        .overlay.show { display: block; }
+
+        /* จัดกึ่งกลางหน้าจอแบบสมบูรณ์ */
+        .layout-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* เทคนิคจัดกึ่งกลางที่แม่นยำที่สุด */
+            width: 100%;
+            max-width: 1100px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .card { 
+            background: white; 
+            border-radius: 3rem; 
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.15); 
+            width: 100%;
+        }
+
+        /* CSS สำหรับ Sidebar ลิงก์ (เผื่อไฟล์ sidebar.html) */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            margin: 0.5rem 1rem;
+            border-radius: 1rem;
+            color: #64748b;
+            text-decoration: none;
+            transition: 0.3s;
+        }
+        .nav-link.active { background: #eff6ff; color: #2563eb; }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
 
-    <div class="mb-8">
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-800">📊 Dashboard สรุปการส่งตรวจแลป</h1>
-        <p class="text-slate-500">ข้อมูลเดือน ตุลาคม - พฤศจิกายน 2568</p>
-    </div>
+    <button class="menu-toggle-btn" onclick="toggleMenu()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+    </button>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ตัวกรองเดือน (Main Month)</label>
-            <select id="monthFilter" class="w-full p-2 bg-slate-50 border rounded-lg font-semibold">
-                <option value="All">ทั้งหมด (ทุกเดือน)</option>
-                <option value="ตุลาคม">ตุลาคม</option>
-                <option value="พฤศจิกายน">พฤศจิกายน</option>
-            </select>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-            <label class="block text-xs font-bold text-slate-400 uppercase mb-2">ตัวกรองแผนก (Main Dept)</label>
-            <select id="deptFilter" class="w-full p-2 bg-slate-50 border rounded-lg font-semibold">
-                <option value="All">ทุกแผนก</option>
-                <option value="CHEMISTRY">Chemistry</option>
-                <option value="HEMATOLOGY">Hematology</option>
-                <option value="IMMUNOLOGY">Immunology</option>
-                <option value="MICROSCOPY">Microscopy</option>
-                <option value="OUT LAB">Out Lab</option>
-            </select>
-        </div>
-    </div>
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div id="sidebar-container"></div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div class="card border-l-4 border-blue-500">
-            <div class="text-xs font-bold text-slate-400 uppercase mb-2">Total Requests</div>
-            <div class="stat-value text-slate-800" id="kpi-total">0</div>
-            <div class="text-[11px] text-slate-400 mt-2 italic">จำนวนเคสรวมทั้งหมด</div>
-        </div>
-        
-        <div class="card border-l-4 border-red-500">
-            <div class="text-xs font-bold text-red-500 uppercase mb-2">% Priority (Urgent)</div>
-            <div class="stat-value text-red-600" id="kpi-stat-pct">0%</div>
-            <div class="flex justify-between text-xs font-bold mt-2 pt-2 border-t border-red-50">
-                <span class="text-red-500">Stat: <span id="val-stat" class="text-slate-700">0</span></span>
-                <span class="text-orange-500">Fast: <span id="val-fast" class="text-slate-700">0</span></span>
+    <div class="layout-center">
+        <div class="animate-in fade-in zoom-in duration-1000">
+            <div class="card p-12 md:p-24 text-center">
+                
+                <div class="w-28 h-28 bg-blue-50 text-blue-600 rounded-[2.5rem] flex items-center justify-center text-6xl mx-auto mb-10 shadow-inner">
+                    🔬
+                </div>
+
+                <h2 class="text-4xl md:text-6xl font-bold text-slate-800 mb-8 tracking-tight">
+                    ยินดีต้อนรับเข้าสู่ระบบ <span class="text-blue-600">PCK LAB</span>
+                </h2>
+                
+                <p class="text-xl md:text-2xl text-slate-500 mb-16 leading-relaxed max-w-3xl mx-auto">
+                    ระบบจัดการข้อมูลและรายงานสถิติห้องปฏิบัติการ <br>
+                    เลือกเมนูจากปุ่มมุมซ้ายบนเพื่อเริ่มต้นใช้งาน
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
+                    <a href="dashboardhub.html" class="group p-8 border-2 border-slate-50 rounded-[2.5rem] hover:border-blue-200 hover:bg-blue-50/50 transition-all duration-300">
+                        <div class="flex items-center mb-4">
+                            <span class="text-3xl mr-4 group-hover:rotate-12 transition-transform">📊</span>
+                            <h4 class="font-bold text-blue-600 text-2xl">Dashboard Hub</h4>
+                        </div>
+                        <p class="text-slate-500 text-lg">สถิติรายงานและข้อมูล TAT แลป</p>
+                    </a>
+
+                    <a href="doclab.html" class="group p-8 border-2 border-slate-50 rounded-[2.5rem] hover:border-emerald-200 hover:bg-emerald-50/50 transition-all duration-300">
+                        <div class="flex items-center mb-4">
+                            <span class="text-3xl mr-4 group-hover:rotate-12 transition-transform">📂</span>
+                            <h4 class="font-bold text-emerald-600 text-2xl">คลังเอกสารแลป</h4>
+                        </div>
+                        <p class="text-slate-500 text-lg">คู่มือ แบบฟอร์ม และเอกสาร SOP</p>
+                    </a>
+                </div>
             </div>
-        </div>
-
-        <div class="card border-l-4 border-emerald-500">
-            <div class="text-xs font-bold text-emerald-500 uppercase mb-2">% Routine & Normal</div>
-            <div class="stat-value text-emerald-600" id="kpi-routine-pct">0%</div>
-            <div class="flex justify-between text-xs font-bold mt-2 pt-2 border-t border-emerald-50">
-                <span class="text-blue-500">Rou: <span id="val-routine" class="text-slate-700">0</span></span>
-                <span class="text-emerald-500">Nor: <span id="val-normal" class="text-slate-700">0</span></span>
-            </div>
-        </div>
-
-        <div class="card border-l-4 border-indigo-500">
-            <div class="text-xs font-bold text-indigo-500 uppercase mb-2">Peak Period</div>
-            <div class="text-xl font-bold text-indigo-700 mt-1" id="kpi-peak-hour">--:--</div>
-            <div class="text-[11px] text-slate-400 mt-2">ช่วงเวลาที่มีเคสสูงสุด</div>
-        </div>
-    </div>
-
-    <div class="space-y-6 mb-8">
-        <div class="card">
-            <h3 class="font-bold text-slate-700 mb-4">📈 ปริมาณงานรายชั่วโมง (Hourly Trend)</h3>
-            <div id="trendChart" class="w-full h-[300px] md:h-[400px]"></div>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div class="card">
-                <h3 class="font-bold text-slate-700 mb-4 text-center">สัดส่วน Priority</h3>
-                <div id="pieChart" class="w-full h-[300px]"></div>
-            </div>
-            <div class="card">
-                <h3 class="font-bold text-slate-700 mb-4 text-center">แยกตามแผนก</h3>
-                <div id="barChart" class="w-full h-[300px]"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card mb-10 border-2 border-slate-100 shadow-xl">
-        <div class="flex flex-col gap-4 mb-6">
-            <h3 class="font-bold text-lg text-slate-700">📄 รายละเอียดข้อมูลรายชั่วโมง (Raw Data)</h3>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-slate-50 p-3 rounded-lg border">
-                <select id="tblDeptFilter" class="p-2 text-sm border rounded bg-white font-medium">
-                    <option value="All">ทุกแผนก</option>
-                    <option value="CHEMISTRY">Chemistry</option>
-                    <option value="HEMATOLOGY">Hematology</option>
-                    <option value="IMMUNOLOGY">Immunology</option>
-                    <option value="MICROSCOPY">Microscopy</option>
-                    <option value="OUT LAB">Out Lab</option>
-                </select>
-                <select id="tblPrioFilter" class="p-2 text-sm border rounded bg-white font-medium">
-                    <option value="All">ทุกความเร่งด่วน</option>
-                    <option value="Normal">Normal</option>
-                    <option value="Routine">Routine</option>
-                    <option value="Stat">Stat</option>
-                    <option value="Stroke fast track">Stroke Fast Track</option>
-                </select>
-                <select id="tblTimeFilter" class="p-2 text-sm border rounded bg-white font-medium">
-                    <option value="All">ทุกช่วงเวลา</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table class="text-sm">
-                <thead>
-                    <tr class="text-slate-600">
-                        <th class="text-left">ช่วงเวลา</th>
-                        <th class="text-center text-emerald-600">Normal</th>
-                        <th class="text-center text-blue-600">Routine</th>
-                        <th class="text-center text-red-600">Stat</th>
-                        <th class="text-center text-orange-600">Stroke</th>
-                        <th class="text-center bg-slate-200 text-slate-900">Total</th>
-                    </tr>
-                </thead>
-                <tbody id="tblBody">
-                    </tbody>
-            </table>
         </div>
     </div>
 
     <script>
-        // --- DATA SETUP ---
-        const csvRaw = `ตุลาคม
-00.00-00.59,,5,,61,66,,1,,62,63,,,,8,8,,1,,33,34,,,3,3,174
-01.00-01.59,,11,,50,61,,6,,52,58,,2,,13,15,,2,,21,23,,,1,1,158
-02.00-02.59,,8,,35,43,,7,,36,43,,2,,8,10,,2,,15,17,,,1,1,114
-03.00-03.59,,3,,26,29,,1,,29,30,,,,7,7,,1,,16,17,,,,,83
-04.00-04.59,,3,,31,34,,1,,33,34,,,,3,3,,1,,8,9,,,2,2,82
-05.00-05.59,,110,,48,158,,62,,63,125,,1,,5,6,,4,,8,12,,,1,1,302
-06.00-06.59,51,457,1,1929,2438,18,362,1,820,1201,14,20,1,252,287,1,7,,454,462,,1,18,19,4407
-07.00-07.59,48,53,2,2557,2660,20,37,3,1323,1383,16,7,,405,428,3,18,,550,571,1,1,49,51,5093
-08.00-08.59,15,19,,1993,2027,6,24,,1323,1353,2,3,,461,466,3,7,,813,823,,7,102,109,4778
-09.00-09.59,4,27,,954,985,3,25,,847,875,2,3,,283,288,2,13,,519,534,1,2,67,70,2752
-10.00-10.59,3,42,1,708,754,3,53,2,596,654,1,8,,299,308,2,27,,1067,1096,,,99,99,2911
-11.00-11.59,2,30,,442,474,2,64,,513,579,1,7,,228,236,,23,,501,524,,1,99,100,1913
-12.00-12.59,,21,1,112,134,,27,2,111,140,,12,,43,55,1,6,,61,68,,,6,6,403
-13.00-13.59,2,27,,501,530,2,39,,552,593,2,10,,233,245,2,9,,190,201,,3,95,98,1667
-14.00-14.59,,30,,314,344,,32,,279,311,,10,,156,166,1,18,,120,139,1,1,75,77,1037
-15.00-15.59,1,27,,257,285,1,37,,270,308,1,8,,135,144,,8,,89,97,,,28,28,862
-16.00-16.59,,26,,231,257,,22,,247,269,,5,,117,122,,3,,92,95,,,22,22,765
-17.00-17.59,,29,,221,250,1,35,,222,258,,9,,138,147,,4,,91,95,,2,14,16,766
-18.00-18.59,,29,,194,223,,35,,218,253,,14,,125,139,,4,,84,88,,2,11,13,716
-19.00-19.59,2,24,,165,191,1,36,,190,227,,8,,99,107,,10,,49,59,,,7,7,591
-20.00-20.59,,27,,154,181,,20,,169,189,,,,48,48,,2,,60,62,,,5,5,485
-21.00-21.59,1,18,,116,135,2,20,,116,138,,3,,38,41,,4,,32,36,,1,2,3,353
-22.00-22.59,1,18,,107,126,1,26,,121,148,,7,,42,49,,6,,45,51,,,2,2,376
-23.00-23.59,,11,,83,94,,12,,102,114,,2,,28,30,,4,,39,43,,,3,3,284
-พฤศจิกายน
-00.00-00.59,,9,,56,65,,7,,70,77,,,,11,11,,3,,23,26,,,1,1,180
-01.00-01.59,,9,,38,47,,6,,47,53,,1,,10,11,,,,17,17,,,1,1,129
-02.00-02.59,,14,,38,52,,9,,40,49,,2,,4,6,,3,,14,17,,1,,1,125
-03.00-03.59,,5,,28,33,,1,,29,30,,,,6,6,,3,,27,30,,,,,99
-04.00-04.59,,2,,31,33,,2,,27,29,,1,,1,2,,,,10,10,,,,,74
-05.00-05.59,2,123,,43,168,,91,,39,130,,3,,,3,,2,,12,14,,,,,315
-06.00-06.59,41,420,3,1956,2420,20,250,,865,1135,19,28,,221,268,2,6,,509,517,2,1,20,23,4363
-07.00-07.59,41,52,,2358,2451,20,32,,1202,1254,19,7,,301,327,,12,,496,508,2,2,59,63,4603
-08.00-08.59,19,24,,2139,2182,14,17,,1429,1460,2,5,,481,488,11,9,,884,904,1,1,71,73,5107
-09.00-09.59,4,31,,854,889,5,18,,735,758,2,4,,281,287,1,11,,455,467,2,2,73,77,2478
-10.00-10.59,3,36,1,2661,2701,2,22,2,802,828,,11,1,294,306,3,21,,1176,1200,,3,68,71,5106
-11.00-11.59,1,33,1,1229,1264,1,38,2,617,658,,6,,225,231,1,10,,877,888,,1,71,72,3113
-12.00-12.59,,27,,136,163,,27,,128,155,,5,,41,46,,5,,31,36,,1,10,11,411
-13.00-13.59,4,40,1,473,518,3,39,1,542,585,2,11,,209,222,1,17,,223,241,,1,77,78,1644
-14.00-14.59,,33,1,277,311,2,26,,258,286,,9,,134,143,,13,1,125,139,,,53,53,932
-15.00-15.59,1,37,,265,303,2,38,,288,328,,6,,133,139,,10,1,111,122,,,45,45,937
-16.00-16.59,1,16,,176,193,2,15,,214,231,,4,,123,127,,5,,92,97,,1,13,14,662
-17.00-17.59,,21,,191,212,2,28,,219,249,,6,,138,144,1,6,,90,97,,,8,8,710
-18.00-18.59,,34,2,175,211,1,38,4,198,241,,4,,156,160,,7,,85,92,,,3,3,707
-19.00-19.59,,17,,155,172,,7,,166,173,,3,,101,104,,2,,49,51,,,4,4,504
-20.00-20.59,1,14,1,152,168,2,11,,157,170,,,,56,56,,3,,34,37,,,4,4,435
-21.00-21.59,2,16,1,125,144,1,18,2,126,147,,3,,44,47,1,7,,62,70,,1,6,7,415
-22.00-22.59,,22,,97,119,,24,,103,127,,3,,37,40,,6,,40,46,,1,5,6,338
-23.00-23.59,,16,,77,93,,19,,74,93,,2,,19,21,,3,,44,47,,,4,4,258`;
-
-        const db = [];
-        let currentMonth = "";
-        const pInt = (v) => v && v.trim() !== '' ? parseInt(v) : 0;
-        const allTimes = new Set();
-
-        csvRaw.split('\n').forEach(line => {
-            const cols = line.split(',');
-            if (cols.length < 5) {
-                if(line.includes("ตุลาคม") || line.includes("พฤศจิกายน")) currentMonth = line.trim();
-                return;
-            }
-            const t = cols[0]; allTimes.add(t);
-            const mapping = [
-                {dept: "CHEMISTRY", idx: [4,1,2,3]}, {dept: "HEMATOLOGY", idx: [9,6,7,8]},
-                {dept: "IMMUNOLOGY", idx: [14,11,12,13]}, {dept: "MICROSCOPY", idx: [19,16,17,18]},
-                {dept: "OUT LAB", idx: [23,21,22,-1]}
-            ];
-            mapping.forEach(m => {
-                const ps = ["Normal", "Routine", "Stat", "Stroke fast track"];
-                m.idx.forEach((idxVal, i) => {
-                    if(idxVal !== -1) db.push({ month: currentMonth, time: t, dept: m.dept, priority: ps[i], val: pInt(cols[idxVal]) });
-                });
-            });
-        });
-
-        // Initialize Time Filter for Table
-        const tblTimeSelect = document.getElementById('tblTimeFilter');
-        Array.from(allTimes).sort().forEach(t => {
-            const opt = document.createElement('option'); opt.value = t; opt.textContent = t; tblTimeSelect.appendChild(opt);
-        });
-
-        const colorMap = { 'Stat': '#ef4444', 'Stroke fast track': '#f97316', 'Routine': '#3b82f6', 'Normal': '#10b981' };
-
-        // --- RENDER FUNCTION ---
-        function render() {
-            const mFilter = document.getElementById('monthFilter').value;
-            const dFilter = document.getElementById('deptFilter').value;
-
-            let filtered = db.filter(d => (mFilter === "All" || d.month === mFilter) && (dFilter === "All" || d.dept === dFilter));
-
-            let total = 0, statCount = 0, fastCount = 0, routineCount = 0, normalCount = 0;
-            const hourlySums = {};
-
-            filtered.forEach(d => {
-                total += d.val;
-                if (d.priority === 'Stat') statCount += d.val;
-                else if (d.priority === 'Stroke fast track') fastCount += d.val;
-                else if (d.priority === 'Routine') routineCount += d.val;
-                else if (d.priority === 'Normal') normalCount += d.val;
-                hourlySums[d.time] = (hourlySums[d.time] || 0) + d.val;
-            });
-
-            // Update KPIs (คืนค่าตัวเลขจริงทั้งหมด)
-            document.getElementById('kpi-total').innerText = total.toLocaleString();
-            document.getElementById('kpi-stat-pct').innerText = total ? (((statCount + fastCount) / total) * 100).toFixed(1) + "%" : "0%";
-            document.getElementById('kpi-routine-pct').innerText = total ? (((routineCount + normalCount) / total) * 100).toFixed(1) + "%" : "0%";
-            
-            document.getElementById('val-stat').innerText = statCount.toLocaleString();
-            document.getElementById('val-fast').innerText = fastCount.toLocaleString();
-            document.getElementById('val-routine').innerText = routineCount.toLocaleString();
-            document.getElementById('val-normal').innerText = normalCount.toLocaleString();
-            
-            let peak = "-"; let peakVal = 0;
-            for(let t in hourlySums) if(hourlySums[t] > peakVal){ peakVal = hourlySums[t]; peak = t; }
-            document.getElementById('kpi-peak-hour').innerText = peak + " (" + peakVal.toLocaleString() + ")";
-
-            // Charts
-            const layout = { margin: {t:20, b:40, l:40, r:10}, font: {size: 11}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)' };
-
-            // Pie
-            Plotly.newPlot('pieChart', [{
-                values: [normalCount, routineCount, statCount, fastCount],
-                labels: ['Normal', 'Routine', 'Stat', 'Fast Track'],
-                type: 'pie', marker: { colors: ['#10b981', '#3b82f6', '#ef4444', '#f97316'] }
-            }], { ...layout, margin: {t:10, b:10, l:10, r:10}, showlegend: true, legend: {orientation: 'h'} });
-
-            // Bar
-            const depts = ["CHEMISTRY", "HEMATOLOGY", "IMMUNOLOGY", "MICROSCOPY", "OUT LAB"];
-            const barTraces = ['Normal', 'Routine', 'Stat', 'Stroke fast track'].map(p => ({
-                x: depts, name: p, type: 'bar', marker: { color: colorMap[p] },
-                y: depts.map(dept => filtered.filter(d => d.dept === dept && d.priority === p).reduce((s,c) => s+c.val, 0))
-            }));
-            Plotly.newPlot('barChart', barTraces, { ...layout, barmode: 'stack', showlegend: false });
-
-            // Trend
-            const times = Array.from(allTimes).sort();
-            const tUrgent = times.map(t => filtered.filter(d => d.time === t && (d.priority==='Stat' || d.priority==='Stroke fast track')).reduce((s,c)=>s+c.val, 0));
-            const tGeneral = times.map(t => filtered.filter(d => d.time === t && (d.priority==='Routine' || d.priority==='Normal')).reduce((s,c)=>s+c.val, 0));
-            Plotly.newPlot('trendChart', [
-                { x: times, y: tGeneral, name: 'Normal/Routine', type: 'scatter', mode: 'lines+markers', line: {color: '#10b981', width: 3} },
-                { x: times, y: tUrgent, name: 'Stat/Fast Track', type: 'scatter', mode: 'lines+markers', line: {color: '#ef4444', width: 3} }
-            ], { ...layout, showlegend: true, legend: {orientation: 'h', y: -0.2} });
-
-            renderTable(); 
+        function toggleMenu() {
+            document.getElementById('sidebar-container').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('show');
         }
 
-        // --- TABLE RENDER ---
-        function renderTable() {
-            const mFilter = document.getElementById('monthFilter').value;
-            const dFilter = document.getElementById('tblDeptFilter').value;
-            const pFilter = document.getElementById('tblPrioFilter').value;
-            const tFilter = document.getElementById('tblTimeFilter').value;
-
-            const tData = db.filter(d => 
-                (mFilter === "All" || d.month === mFilter) &&
-                (dFilter === "All" || d.dept === dFilter) &&
-                (pFilter === "All" || d.priority === pFilter) &&
-                (tFilter === "All" || d.time === tFilter)
-            );
-
-            const grouped = {};
-            tData.forEach(d => {
-                if(!grouped[d.time]) grouped[d.time] = {time: d.time, Normal:0, Routine:0, Stat:0, Stroke:0};
-                const pKey = d.priority.includes("Stroke") ? "Stroke" : d.priority;
-                grouped[d.time][pKey] += d.val;
-            });
-
-            const tbody = document.getElementById('tblBody');
-            tbody.innerHTML = '';
-            
-            Object.values(grouped).sort((a,b) => a.time.localeCompare(b.time)).forEach(r => {
-                const total = r.Normal + r.Routine + r.Stat + r.Stroke;
-                if(total === 0) return;
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50";
-                tr.innerHTML = `
-                    <td class="text-left font-bold text-slate-700">${r.time}</td>
-                    <td class="text-center text-emerald-600 font-bold">${r.Normal.toLocaleString()}</td>
-                    <td class="text-center text-blue-600 font-bold">${r.Routine.toLocaleString()}</td>
-                    <td class="text-center text-red-600 font-bold">${r.Stat.toLocaleString()}</td>
-                    <td class="text-center text-orange-600 font-bold">${r.Stroke.toLocaleString()}</td>
-                    <td class="text-center bg-slate-100 font-black text-slate-800">${total.toLocaleString()}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Window resize handler for charts
-        window.addEventListener('resize', () => {
-            Plotly.Plots.resize('pieChart');
-            Plotly.Plots.resize('barChart');
-            Plotly.Plots.resize('trendChart');
-        });
-
-        // Listeners
-        document.getElementById('monthFilter').addEventListener('change', render);
-        document.getElementById('deptFilter').addEventListener('change', render);
-        document.getElementById('tblDeptFilter').addEventListener('change', renderTable);
-        document.getElementById('tblPrioFilter').addEventListener('change', renderTable);
-        document.getElementById('tblTimeFilter').addEventListener('change', renderTable);
-
-        render();
+        fetch('sidebar.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('sidebar-container').innerHTML = data;
+                const activeLink = document.getElementById('link-home');
+                if (activeLink) activeLink.classList.add('active');
+            })
+            .catch(err => console.error('Sidebar error:', err));
     </script>
 </body>
 </html>

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คลังเอกสารแลป - PCK LAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background-color: #f1f5f9; 
+            font-size: 1.1rem; 
+            margin: 0;
+            padding-top: 60px;
+        }
+        .card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); overflow: hidden; }
+        .search-focus:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        
+        /* สไตล์สำหรับการ์ดเอกสาร */
+        .doc-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; }
+        .doc-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* --- สไตล์ส่วน Sidebar ที่เพิ่มใหม่ --- */
+        .menu-toggle-btn {
+            position: fixed;
+            top: 25px;
+            left: 25px;
+            z-index: 100;
+            background: white;
+            padding: 14px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+        }
+        .menu-toggle-btn:hover { transform: scale(1.05); background: #f8fafc; }
+
+        #sidebar-container {
+            position: fixed;
+            top: 0;
+            left: -320px; 
+            width: 320px;
+            height: 100vh;
+            background: white;
+            z-index: 90;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid #e2e8f0;
+        }
+        #sidebar-container.active { left: 0; }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            z-index: 80;
+        }
+        .overlay.show { display: block; }
+    </style>
+</head>
+<body class="p-6 md:p-12 min-h-screen">
+
+    <button class="menu-toggle-btn" onclick="toggleMenu()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+    </button>
+
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div id="sidebar-container"></div>
+
+    <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 ml-16 md:ml-20">
+            <div>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-800">คลังเอกสารแลป</h2>
+                <p class="text-slate-500 mt-2 text-lg">จัดการและเข้าถึงเอกสารคุณภาพทั้งหมดในที่เดียว</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row items-center gap-4 w-full lg:w-auto">
+                <div class="relative w-full md:w-80">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </span>
+                    <input 
+                        type="text" 
+                        id="docSearch" 
+                        onkeyup="handleSearch()"
+                        placeholder="ค้นหาชื่อเอกสาร..." 
+                        class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm search-focus transition-all shadow-sm"
+                    >
+                </div>
+
+                <div class="flex bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 w-full md:w-auto overflow-x-auto">
+                    <button onclick="filterDocs('all')" class="doc-filter-btn flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all bg-blue-600 text-white whitespace-nowrap" id="filter-all">ทั้งหมด</button>
+                    <button onclick="filterDocs('manual')" class="doc-filter-btn flex-1 md:flex-none px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-slate-500 hover:bg-slate-50 whitespace-nowrap" id="filter-manual">คู่มือ</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="docs-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            </div>
+    </div>
+
+    <script>
+        // --- ระบบ Sidebar ---
+        function toggleMenu() {
+            document.getElementById('sidebar-container').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('show');
+        }
+
+        fetch('sidebar.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('sidebar-container').innerHTML = data;
+                // ไฮไลท์เมนู คลังเอกสาร (หน้า 3)
+                const activeLink = document.getElementById('link-page3');
+                if (activeLink) activeLink.classList.add('active');
+            })
+            .catch(err => console.error('Sidebar error:', err));
+
+        // --- ข้อมูลเอกสารเดิม ---
+        const labDocuments = [
+            { 
+                id: 1, 
+                title: 'Service Profile 2568', 
+                type: 'manual', 
+                date: '2025-12-31', 
+                icon: '📄', 
+                color: 'blue',
+                link: 'https://drive.google.com/file/d/1mKwocaHl-jtJqrowhxdOp_5MUS-oG8Oo/view'
+            },
+            { id: 2, title: 'รออัปเดตข้อมูล (1)', type: 'manual', date: '-', icon: '📂', color: 'slate', link: '#' },
+            { id: 3, title: 'รออัปเดตข้อมูล (2)', type: 'manual', date: '-', icon: '📂', color: 'slate', link: '#' },
+            { id: 4, title: 'รออัปเดตข้อมูล (3)', type: 'manual', date: '-', icon: '📂', color: 'slate', link: '#' },
+            { id: 5, title: 'รออัปเดตข้อมูล (4)', type: 'manual', date: '-', icon: '📂', color: 'slate', link: '#' },
+            { id: 6, title: 'รออัปเดตข้อมูล (5)', type: 'manual', date: '-', icon: '📂', color: 'slate', link: '#' }
+        ];
+
+        let currentFilter = 'all';
+        let searchQuery = '';
+
+        function handleSearch() {
+            searchQuery = document.getElementById('docSearch').value.toLowerCase();
+            renderDocuments();
+        }
+
+        function filterDocs(type) {
+            currentFilter = type;
+            document.querySelectorAll('.doc-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-slate-500', 'hover:bg-slate-50');
+            });
+            const activeBtn = document.getElementById(`filter-${type}`);
+            if(activeBtn) {
+                activeBtn.classList.remove('text-slate-500', 'hover:bg-slate-50');
+                activeBtn.classList.add('bg-blue-600', 'text-white');
+            }
+            renderDocuments();
+        }
+
+        function renderDocuments() {
+            const grid = document.getElementById('docs-grid');
+            const filtered = labDocuments.filter(doc => {
+                const matchesFilter = currentFilter === 'all' || doc.type === currentFilter;
+                const matchesSearch = doc.title.toLowerCase().includes(searchQuery);
+                return matchesFilter && matchesSearch;
+            });
+            
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-20 text-center flex flex-col items-center">
+                        <div class="text-6xl mb-4 opacity-20">🔍</div>
+                        <div class="text-slate-400 italic font-medium">ไม่พบเอกสารที่ตรงกับเงื่อนไข</div>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(doc => `
+                <div onclick="${doc.link !== '#' ? `window.open('${doc.link}', '_blank')` : ''}" 
+                     class="card p-8 doc-card flex flex-col cursor-pointer bg-white border border-transparent hover:border-blue-100 transition-all group">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="w-14 h-14 bg-${doc.color}-100 text-${doc.color}-600 text-3xl flex items-center justify-center rounded-2xl group-hover:scale-110 transition-transform">
+                            ${doc.icon}
+                        </div>
+                        <span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-slate-100 text-slate-500 rounded-full">
+                            ${doc.type}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-2 leading-snug group-hover:text-blue-600 transition-colors">
+                        ${doc.title}
+                    </h3>
+                    <p class="text-sm text-slate-400 mb-8">อัปเดตล่าสุด: ${doc.date}</p>
+                    <div class="mt-auto flex items-center text-blue-600 font-bold text-sm">
+                        <span>เปิดอ่านเอกสาร</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.onload = () => {
+            renderDocuments();
+        };
+    </script>
+</body>
+</html>
