@@ -12,12 +12,12 @@
             background-color: #f1f5f9; 
             font-size: 1.1rem; 
             margin: 0;
-            padding-top: 60px;
+            /* แก้ไข: ใช้ min-height เพื่อให้เลื่อนขึ้นลงได้ */
+            min-height: 100vh;
         }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); overflow: hidden; }
         .search-focus:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
         
-        /* สไตล์สำหรับการ์ดเอกสาร */
         .doc-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; }
         .doc-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
         
@@ -25,7 +25,7 @@
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        /* --- สไตล์ส่วน Sidebar ที่เพิ่มใหม่ --- */
+        /* --- สไตล์ Sidebar และปุ่มเมนูที่แก้ไขใหม่ --- */
         .menu-toggle-btn {
             position: fixed;
             top: 25px;
@@ -36,10 +36,18 @@
             border-radius: 16px;
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             border: 1px solid #e2e8f0;
+            opacity: 1;
+            visibility: visible;
         }
-        .menu-toggle-btn:hover { transform: scale(1.05); background: #f8fafc; }
+
+        /* เพิ่ม Class สำหรับซ่อนปุ่ม */
+        .menu-toggle-btn.hidden-btn {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-20px);
+        }
 
         #sidebar-container {
             position: fixed;
@@ -48,7 +56,7 @@
             width: 320px;
             height: 100vh;
             background: white;
-            z-index: 90;
+            z-index: 110; /* ให้สูงกว่าปุ่มและ Overlay */
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border-right: 1px solid #e2e8f0;
         }
@@ -63,14 +71,14 @@
             background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(4px);
             display: none;
-            z-index: 80;
+            z-index: 105;
         }
         .overlay.show { display: block; }
     </style>
 </head>
-<body class="p-6 md:p-12 min-h-screen">
+<body class="p-6 md:p-12">
 
-    <button class="menu-toggle-btn" onclick="toggleMenu()">
+    <button id="menuBtn" class="menu-toggle-btn" onclick="toggleMenu()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
         </svg>
@@ -79,8 +87,7 @@
     <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
     <div id="sidebar-container"></div>
 
-    <div class="max-w-6xl mx-auto">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 ml-16 md:ml-20">
+    <div class="max-w-6xl mx-auto pt-16"> <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 gap-6 ml-16 md:ml-20">
             <div>
                 <h2 class="text-3xl md:text-4xl font-bold text-slate-800">คลังเอกสารแลป</h2>
                 <p class="text-slate-500 mt-2 text-lg">จัดการและเข้าถึงเอกสารคุณภาพทั้งหมดในที่เดียว</p>
@@ -114,23 +121,33 @@
     </div>
 
     <script>
-        // --- ระบบ Sidebar ---
+        // --- ระบบ Sidebar (แก้ไขใหม่เพื่อซ่อนปุ่ม) ---
         function toggleMenu() {
-            document.getElementById('sidebar-container').classList.toggle('active');
-            document.getElementById('overlay').classList.toggle('show');
+            const sidebar = document.getElementById('sidebar-container');
+            const overlay = document.getElementById('overlay');
+            const menuBtn = document.getElementById('menuBtn');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('show');
+
+            // เพิ่ม logic การซ่อน/แสดงปุ่ม
+            if (sidebar.classList.contains('active')) {
+                menuBtn.classList.add('hidden-btn');
+            } else {
+                menuBtn.classList.remove('hidden-btn');
+            }
         }
 
         fetch('sidebar.html')
             .then(response => response.text())
             .then(data => {
                 document.getElementById('sidebar-container').innerHTML = data;
-                // ไฮไลท์เมนู คลังเอกสาร (หน้า 3)
                 const activeLink = document.getElementById('link-page3');
                 if (activeLink) activeLink.classList.add('active');
             })
             .catch(err => console.error('Sidebar error:', err));
 
-        // --- ข้อมูลเอกสารเดิม ---
+        // --- ระบบจัดการข้อมูลเอกสาร ---
         const labDocuments = [
             { 
                 id: 1, 
@@ -192,7 +209,7 @@
                 <div onclick="${doc.link !== '#' ? `window.open('${doc.link}', '_blank')` : ''}" 
                      class="card p-8 doc-card flex flex-col cursor-pointer bg-white border border-transparent hover:border-blue-100 transition-all group">
                     <div class="flex justify-between items-start mb-6">
-                        <div class="w-14 h-14 bg-${doc.color}-100 text-${doc.color}-600 text-3xl flex items-center justify-center rounded-2xl group-hover:scale-110 transition-transform">
+                        <div class="w-14 h-14 bg-blue-50 text-blue-600 text-3xl flex items-center justify-center rounded-2xl group-hover:scale-110 transition-transform">
                             ${doc.icon}
                         </div>
                         <span class="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-slate-100 text-slate-500 rounded-full">

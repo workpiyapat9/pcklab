@@ -12,7 +12,8 @@
             background-color: #f1f5f9; 
             font-size: 1.1rem; 
             margin: 0;
-            padding-top: 20px;
+            /* แก้ไข: ใช้ min-height เพื่อให้เลื่อนหน้าจอได้ */
+            min-height: 100vh;
         }
         .card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); overflow: hidden; }
         
@@ -24,7 +25,7 @@
         
         .search-focus:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
 
-        /* Sidebar Toggle Button Style */
+        /* --- สไตล์ปุ่มและ Sidebar (แก้ไขให้ซ่อนปุ่มได้) --- */
         .menu-toggle-btn {
             position: fixed;
             top: 25px;
@@ -35,8 +36,17 @@
             border-radius: 16px;
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
             border: 1px solid #e2e8f0;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Class สำหรับซ่อนปุ่มเมื่อ Sidebar เปิด */
+        .menu-toggle-btn.hidden-btn {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-20px);
         }
 
         #sidebar-container {
@@ -46,7 +56,7 @@
             width: 320px;
             height: 100vh;
             background: white;
-            z-index: 95;
+            z-index: 110; /* สูงกว่าปุ่มและ Overlay */
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border-right: 1px solid #e2e8f0;
         }
@@ -61,14 +71,14 @@
             background: rgba(15, 23, 42, 0.4);
             backdrop-filter: blur(4px);
             display: none;
-            z-index: 90;
+            z-index: 105;
         }
         .overlay.show { display: block; }
     </style>
 </head>
-<body class="p-6 md:p-12 min-h-screen">
+<body class="p-6 md:p-12">
 
-    <button class="menu-toggle-btn" onclick="toggleMenu()">
+    <button id="menuBtn" class="menu-toggle-btn" onclick="toggleMenu()">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
         </svg>
@@ -77,7 +87,7 @@
     <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
     <div id="sidebar-container"></div>
 
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-6xl mx-auto pt-16">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6 ml-16 md:ml-20">
             <div>
                 <h2 class="text-3xl md:text-4xl font-bold text-slate-800">Dashboard Hub</h2>
@@ -141,18 +151,28 @@
     </div>
 
     <script>
-        // ฟังก์ชันเปิด/ปิด Sidebar
+        // ฟังก์ชันเปิด/ปิด Sidebar พร้อมซ่อนปุ่ม
         function toggleMenu() {
-            document.getElementById('sidebar-container').classList.toggle('active');
-            document.getElementById('overlay').classList.toggle('show');
+            const sidebar = document.getElementById('sidebar-container');
+            const overlay = document.getElementById('overlay');
+            const menuBtn = document.getElementById('menuBtn');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('show');
+
+            // เพิ่ม logic ซ่อน/แสดงปุ่มเมนู
+            if (sidebar.classList.contains('active')) {
+                menuBtn.classList.add('hidden-btn');
+            } else {
+                menuBtn.classList.remove('hidden-btn');
+            }
         }
 
-        // โหลด Sidebar จากไฟล์ภายนอก
+        // โหลด Sidebar
         fetch('sidebar.html')
             .then(response => response.text())
             .then(data => {
                 document.getElementById('sidebar-container').innerHTML = data;
-                // ตั้งค่า Active สำหรับหน้า Dashboard Hub (สมมติว่าเป็น ID link-page2)
                 const activeLink = document.getElementById('link-page2');
                 if (activeLink) activeLink.classList.add('active');
             })
