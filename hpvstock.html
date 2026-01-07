@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPV DNA Test Tracking (Self vs Clinician)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .card { @apply bg-white p-6 rounded-2xl shadow-sm border border-gray-100; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #be185d;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-gradient-to-r from-pink-700 via-pink-800 to-indigo-900 text-white py-12 px-6 shadow-lg relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight">สถิติเบิก-ส่งชุดตรวจ HPV DNA Test</h1>
+                    <p class="text-pink-100 mt-2 text-lg">ยอดรับอุปกรณ์และยอดส่งตรวจที่รายงานผลแล้ว</p>
+                </div>
+                
+                <!-- Navigation Buttons Cluster -->
+                <div class="flex bg-black/20 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner shrink-0">
+                    <a href="hpvstock.html" class="px-5 py-2.5 rounded-lg text-sm font-medium bg-white text-indigo-900 shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        สถิติการเบิก
+                    </a>
+                    <a href="hpvresult.html" class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/20 text-white flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        ผลการตรวจ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6 -mt-8 relative z-20">
+        <div id="loading" class="fixed inset-0 bg-white/90 z-50 flex items-center justify-center flex-col gap-4">
+            <div class="loader"></div>
+            <p class="font-medium text-slate-600 animate-pulse">กำลังประมวลผลข้อมูล...</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="card bg-gradient-to-br from-white to-blue-50 border-b-4 border-blue-500">
+                <p class="text-sm font-bold text-blue-600 uppercase">รับอุปกรณ์ไป</p>
+                <h2 id="kpi-requested" class="text-4xl font-black mt-1">0</h2>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-emerald-50 border-b-4 border-emerald-500">
+                <p class="text-sm font-bold text-emerald-600 uppercase">รายงานผลแล้ว</p>
+                <h2 id="kpi-sent" class="text-4xl font-black mt-1 text-emerald-700">0</h2>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-pink-50 border-b-4 border-pink-700">
+                <p class="text-sm font-bold text-pink-600 uppercase">ส่งตรวจ</p>
+                <h2 id="kpi-percent" class="text-4xl font-black mt-1 text-pink-700">0%</h2>
+                <div class="w-full bg-pink-100 rounded-full h-2 mt-3"><div id="progress-bar" class="bg-pink-500 h-2 transition-all duration-1000" style="width: 0%"></div></div>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-orange-50 border-b-4 border-orange-500">
+                <p class="text-sm font-bold text-orange-600 uppercase">ยังไม่ได้รับรายงานผล</p>
+                <h2 id="kpi-stock" class="text-4xl font-black mt-1 text-orange-700">0</h2>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="card lg:col-span-2">
+                <h3 class="font-bold text-lg mb-6 text-slate-700">จำนวนชุดตรวจที่ส่งตรวจและคงเหลือรายหน่วยงาน</h3>
+                <div class="h-[400px]"><canvas id="mainChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3 class="font-bold text-lg mb-6 text-slate-700 text-center">สัดส่วนวิธีการตรวจ</h3>
+                <div class="h-80"><canvas id="typeChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card overflow-hidden">
+            <h3 class="font-bold text-lg mb-6 text-slate-700">ข้อมูลรายหน่วยงาน (เรียงจากยอดรายงานผลสูงสุด)</h3>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50 text-[11px] font-bold text-slate-600">
+                        <tr>
+                            <th rowspan="2" class="px-6 py-4 text-left border-r sticky left-0 bg-slate-100">หน่วยงาน</th>
+                            <th colspan="2" class="bg-pink-100/40 border-r border-b text-center">Self-test</th>
+                            <th colspan="3" class="bg-indigo-100/40 border-r border-b text-center">Clinician</th>
+                            <th rowspan="2" class="px-4 py-4 text-right border-r bg-slate-100/50">ส่งตรวจรวม</th>
+                            <th rowspan="2" class="px-4 py-4 text-right bg-orange-50 text-orange-700">คงเหลือ</th>
+                        </tr>
+                        <tr class="bg-slate-50/80">
+                            <th class="px-4 py-2 border-r">เบิก</th><th class="px-4 py-2 border-r">ส่งHPV</th>
+                            <th class="px-4 py-2 border-r">เบิก</th><th class="px-4 py-2 border-r">ส่งHPV</th><th class="px-4 py-2 border-r">ส่งLBC</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="bg-white divide-y divide-slate-100 text-xs"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/1474eE5jGXvnw7QrhOhQwt96VJGLJpTG2vTPu4OVbHxM/export?format=csv&gid=854312084`;
+        Chart.register(ChartDataLabels);
+        let rawData = [];
+        let mainChart, typeChart;
+
+        async function init() {
+            try {
+                const res = await fetch(CSV_URL);
+                const csv = await res.text();
+                Papa.parse(csv, {
+                    header: false,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        rawData = results.data.filter((row, index) => {
+                            const label = (row[0] || '').toString().trim();
+                            return index > 0 && label !== "" && !label.includes('หน่วยงาน') && !label.includes('พื้นที่') && !label.includes('รวม');
+                        }).map(row => {
+                            const sReq = parseInt(row[1]) || 0;
+                            const sSent = parseInt(row[2]) || 0;
+                            const cReq = parseInt(row[4]) || 0;
+                            const cHpv = parseInt(row[5]) || 0;
+                            const cLbc = parseInt(row[6]) || 0;
+                            const totalSent = sSent + cHpv + cLbc;
+                            const totalReq = sReq + cReq;
+                            
+                            return {
+                                name: row[0],
+                                sReq, sSent, cReq, cHpv, cLbc,
+                                totalSent,
+                                totalReq,
+                                remaining: Math.max(0, totalReq - totalSent)
+                            };
+                        });
+                        
+                        rawData.sort((a, b) => b.totalSent - a.totalSent);
+                        render();
+                        document.getElementById('loading').style.display = 'none';
+                    }
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function render() {
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            let totals = { sR: 0, sS: 0, cR: 0, cH: 0, cL: 0 };
+            const chartData = { labels: [], sent: [], stock: [] };
+
+            rawData.forEach(d => {
+                totals.sR += d.sReq; totals.sS += d.sSent;
+                totals.cR += d.cReq; totals.cH += d.cHpv; totals.cL += d.cLbc;
+
+                chartData.labels.push(d.name);
+                let r = d.sReq + d.cReq; 
+                let s = d.totalSent;
+                
+                chartData.sent.push(s);
+                chartData.stock.push(Math.max(0, r - s));
+
+                tableBody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-3 font-medium border-r bg-slate-50/20 sticky left-0 z-10">${d.name}</td>
+                        <td class="text-right px-4 border-r">${d.sReq.toLocaleString()}</td>
+                        <td class="text-right px-4 border-r text-pink-600 font-bold">${d.sSent.toLocaleString()}</td>
+                        <td class="text-right px-4 border-r">${d.cReq.toLocaleString()}</td>
+                        <td class="text-right px-4 border-r">${d.cHpv.toLocaleString()}</td>
+                        <td class="text-right px-4 border-r">${d.cLbc.toLocaleString()}</td>
+                        <td class="text-right px-4 font-bold text-indigo-700 border-r bg-slate-50/40">${d.totalSent.toLocaleString()}</td>
+                        <td class="text-right px-4 font-bold text-orange-700 bg-orange-50/30">${d.remaining.toLocaleString()}</td>
+                    </tr>`;
+            });
+
+            updateKPIs(totals);
+            updateCharts(chartData, totals);
+        }
+
+        function updateKPIs(t) {
+            const r = t.sR + t.cR;
+            const s = t.sS + t.cH + t.cL;
+            
+            document.getElementById('kpi-requested').innerText = r.toLocaleString();
+            document.getElementById('kpi-sent').innerText = s.toLocaleString();
+            document.getElementById('kpi-stock').innerText = Math.max(0, r-s).toLocaleString();
+            const p = r > 0 ? (s/r*100).toFixed(1) : 0;
+            document.getElementById('kpi-percent').innerText = p + '%';
+            document.getElementById('progress-bar').style.width = Math.min(p, 100) + '%';
+        }
+
+        function updateCharts(cd, t) {
+            const ctx1 = document.getElementById('mainChart').getContext('2d');
+            if (mainChart) mainChart.destroy();
+            mainChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: cd.labels,
+                    datasets: [
+                        { label: 'ส่งตรวจและรายงานผลแล้ว', data: cd.sent, backgroundColor: '#be185d', stack: 'A' },
+                        { label: 'ยังไม่ได้ส่งตรวจ', data: cd.stock, backgroundColor: '#e2e8f0', stack: 'A' }
+                    ]
+                },
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        datalabels: { 
+                            color: (c) => c.datasetIndex === 0 ? '#fff' : '#475569', 
+                            font: { weight: 'bold', size: 10 },
+                            formatter: (v) => v > 0 ? v.toLocaleString() : '',
+                            anchor: 'center',
+                            align: 'center'
+                        },
+                        legend: { position: 'top' }
+                    },
+                    scales: { 
+                        x: { stacked: true }, 
+                        y: { stacked: true, beginAtZero: true } 
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('typeChart').getContext('2d');
+            if (typeChart) typeChart.destroy();
+            typeChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Self-test', 'Clinician', 'LBC'],
+                    datasets: [{ data: [t.sS, t.cH, t.cL], backgroundColor: ['#db2777', '#4f46e5', '#818cf8'] }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    cutout: '60%',
+                    plugins: {
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'medium', size: 12 },
+                            formatter: (v, ctx) => {
+                                let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                return v > 0 ? (v*100/sum).toFixed(0)+'%' : '';
+                            }
+                        },
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>

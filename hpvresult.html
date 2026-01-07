@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HPV Screening Detailed Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .card { @apply bg-white p-6 rounded-2xl shadow-sm border border-slate-100; }
+        .stat-val { @apply text-2xl font-bold; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #be185d;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Table enhancements */
+        table { font-family: 'Kanit', sans-serif; }
+        th { @apply whitespace-nowrap; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-gradient-to-r from-pink-700 via-pink-800 to-indigo-900 text-white py-12 px-6 shadow-lg relative overflow-hidden">
+        <div class="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold tracking-tight">สถิติผลการตรวจ HPV DNA Test</h1>
+                    <p class="text-pink-100 mt-2 text-lg">รายงานผลการตรวจแยกตามประเภทและความผิดปกติ</p>
+                </div>
+                
+                <!-- Navigation Buttons Cluster -->
+                <div class="flex bg-black/20 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
+                    <a href="hpvstock.html" class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/20 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        </svg>
+                        สถิติการเบิก
+                    </a>
+                    <a href="hpvresult.html" class="px-5 py-2.5 rounded-lg text-sm font-medium bg-white text-indigo-900 shadow-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        ผลการตรวจ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6 -mt-8 relative z-20">
+        
+        <div id="loading-overlay" class="fixed inset-0 bg-white/90 z-50 flex items-center justify-center flex-col gap-4">
+            <div class="loader"></div>
+            <p class="font-medium text-slate-600 animate-pulse">กำลังประมวลผลข้อมูล...</p>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="card bg-gradient-to-br from-white to-blue-50 border-b-4 border-blue-500">
+                <p class="text-sm font-bold text-blue-600 uppercase">จำนวนส่งตรวจทั้งหมด</p>
+                <h2 id="total-screened" class="text-4xl font-black mt-1">0</h2>
+                <p class="text-xs text-slate-400 mt-1">ราย (รวม รพ.พระจอมเกล้า)</p>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-rose-50 border-b-4 border-pink-700">
+                <p class="text-sm font-bold text-rose-600 uppercase">พบเชื้อ (Positive)</p>
+                <h2 id="total-pos" class="text-4xl font-black mt-1 text-rose-700">0</h2>
+                <p id="pos-percent" class="text-xs text-rose-400 mt-1 font-semibold">0%</p>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-emerald-50 border-b-4 border-emerald-500">
+                <p class="text-sm font-bold text-emerald-600 uppercase">ไม่พบเชื้อ (Negative)</p>
+                <h2 id="total-neg" class="text-4xl font-black mt-1 text-emerald-700">0</h2>
+                <p id="neg-percent" class="text-xs text-emerald-400 mt-1 font-semibold">0%</p>
+            </div>
+            <div class="card bg-gradient-to-br from-white to-slate-50 border-b-4 border-slate-400">
+                <p class="text-sm font-bold text-slate-600 uppercase">ไม่สมบูรณ์ (Invalid)</p>
+                <h2 id="total-invalid" class="text-4xl font-black mt-1 text-slate-600">0</h2>
+                <p class="text-xs text-slate-400 mt-1">ต้องตรวจซ้ำ</p>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="card lg:col-span-1">
+                <h3 class="font-bold text-lg mb-6 text-slate-700 text-center">สัดส่วนผลการตรวจภาพรวม</h3>
+                <div class="h-80"><canvas id="typePieChart"></canvas></div>
+            </div>
+            <div class="card lg:col-span-2">
+                <h3 class="font-bold text-lg mb-6 text-slate-700">เปรียบเทียบผลตรวจแยกตามหน่วยงาน</h3>
+                <div class="h-80"><canvas id="hospitalBarChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="card overflow-hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h3 class="font-bold text-lg text-slate-700">ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)</h3>
+                <div class="relative w-full md:w-64">
+                    <input type="text" id="tableSearch" placeholder="ค้นหาหน่วยงาน..." class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none transition-all pl-10">
+                    <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </div>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                <table class="min-w-full divide-y divide-slate-200" id="mainTable">
+                    <thead class="bg-slate-50 text-[11px] font-bold text-slate-600">
+                        <tr>
+                            <th class="px-6 py-4 text-left border-r sticky left-0 bg-slate-100" rowspan="2">หน่วยงาน</th>
+                            <th class="px-4 py-2 text-center border-r border-b bg-pink-100/40" colspan="4">Self-test</th>
+                            <th class="px-4 py-2 text-center border-r border-b bg-indigo-100/40" colspan="4">Clinician</th>
+                            <th class="px-4 py-4 text-center border-r bg-slate-100/50" rowspan="2">LBC</th>
+                            <th class="px-4 py-4 text-center bg-slate-100" rowspan="2">รวม</th>
+                        </tr>
+                        <tr class="bg-slate-50/80">
+                            <th class="px-4 py-2 border-r text-rose-600">Type 16</th>
+                            <th class="px-4 py-2 border-r text-rose-500">Type 18</th>
+                            <th class="px-4 py-2 border-r text-orange-500">Other</th>
+                            <th class="px-4 py-2 border-r">Neg</th>
+                            <th class="px-4 py-2 border-r text-rose-600">Type 16</th>
+                            <th class="px-4 py-2 border-r text-rose-500">Type 18</th>
+                            <th class="px-4 py-2 border-r text-orange-500">Other</th>
+                            <th class="px-4 py-2 border-r">Neg</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body" class="bg-white divide-y divide-slate-100 text-xs">
+                    </tbody>
+                    <tfoot id="data-table-foot" class="bg-slate-50 font-bold border-t-2 border-slate-200 text-xs">
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SPREADSHEET_ID = '1474eE5jGXvnw7QrhOhQwt96VJGLJpTG2vTPu4OVbHxM';
+        const GID = '1541013318';
+        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${GID}`;
+
+        let chartInstances = {};
+
+        async function fetchData() {
+            try {
+                const response = await fetch(CSV_URL);
+                const data = await response.text();
+                const rows = data.split('\n').map(row => {
+                    return row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(cell => cell.trim().replace(/^"|"$/g, ''));
+                });
+                
+                processData(rows.slice(3)); 
+                document.getElementById('loading-overlay').classList.add('hidden');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function processData(dataRows) {
+            let stats = {
+                neg: 0, pos16: 0, pos18: 0, posOther: 0, invalid: 0, lbc: 0,
+                hospitals: [] 
+            };
+
+            let totals = {
+                s16: 0, s18: 0, sOther: 0, sNeg: 0,
+                c16: 0, c18: 0, cOther: 0, cNeg: 0,
+                lbc: 0, grand: 0
+            };
+
+            const tableBody = document.getElementById('data-table-body');
+            tableBody.innerHTML = '';
+
+            let hospitalList = [];
+
+            dataRows.forEach(row => {
+                const name = row[0];
+                if (!name || name === "" || name.includes('รวม') || name.toLowerCase().includes('total')) return;
+
+                const s16 = parseNum(row[1]);
+                const s18 = parseNum(row[2]);
+                const sOther = parseNum(row[3]);
+                const sNeg = parseNum(row[4]);
+                const sInv = parseNum(row[5]);
+
+                const c16 = parseNum(row[7]);
+                const c18 = parseNum(row[8]);
+                const cOther = parseNum(row[9]);
+                const cNeg = parseNum(row[10]);
+                const cInv = parseNum(row[11]);
+
+                const lbc = parseNum(row[13]);
+
+                const totalInHospital = (s16+s18+sOther+sNeg+sInv) + (c16+c18+cOther+cNeg+cInv) + lbc;
+
+                hospitalList.push({
+                    name, s16, s18, sOther, sNeg, sInv, c16, c18, cOther, cNeg, cInv, lbc,
+                    total: totalInHospital
+                });
+
+                stats.neg += (sNeg + cNeg);
+                stats.pos16 += (s16 + c16);
+                stats.pos18 += (s18 + c18);
+                stats.posOther += (sOther + cOther);
+                stats.invalid += (sInv + cInv);
+                stats.lbc += lbc;
+
+                totals.s16 += s16; totals.s18 += s18; totals.sOther += sOther; totals.sNeg += sNeg;
+                totals.c16 += c16; totals.c18 += c18; totals.cOther += cOther; totals.cNeg += cNeg;
+                totals.lbc += lbc; totals.grand += totalInHospital;
+            });
+
+            hospitalList.sort((a, b) => b.total - a.total);
+
+            hospitalList.forEach(h => {
+                stats.hospitals.push({
+                    name: h.name,
+                    n16: h.s16 + h.c16,
+                    n18: h.s18 + h.c18,
+                    nOther: h.sOther + h.cOther,
+                    nNeg: h.sNeg + h.cNeg
+                });
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-3 font-medium border-r bg-slate-50/20 sticky left-0 z-10">${h.name}</td>
+                    <td class="text-right px-4 border-r text-rose-600 font-bold">${h.s16 || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${h.s18 || '-'}</td>
+                    <td class="text-right px-4 border-r text-orange-500">${h.sOther || '-'}</td>
+                    <td class="text-right px-4 border-r text-emerald-600">${h.sNeg || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-600 font-bold">${h.c16 || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${h.c18 || '-'}</td>
+                    <td class="text-right px-4 border-r text-orange-500">${h.cOther || '-'}</td>
+                    <td class="text-right px-4 border-r text-emerald-600">${h.cNeg || '-'}</td>
+                    <td class="text-right px-4 font-bold border-r">${h.lbc || '-'}</td>
+                    <td class="text-right px-4 font-bold bg-slate-50/40">${h.total.toLocaleString()}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            const tableFoot = document.getElementById('data-table-foot');
+            tableFoot.innerHTML = `
+                <tr class="bg-slate-100">
+                    <td class="px-6 py-4 border-r sticky left-0 bg-slate-100">รวมทั้งหมด</td>
+                    <td class="text-right px-4 border-r">${totals.s16.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.s18.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.sOther.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.sNeg.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.c16.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.c18.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.cOther.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.cNeg.toLocaleString()}</td>
+                    <td class="text-right px-4 border-r">${totals.lbc.toLocaleString()}</td>
+                    <td class="text-right px-4 text-indigo-900 bg-indigo-50">${totals.grand.toLocaleString()}</td>
+                </tr>
+            `;
+
+            const totalPositive = stats.pos16 + stats.pos18 + stats.posOther;
+            const totalTests = stats.neg + totalPositive + stats.invalid + stats.lbc;
+
+            document.getElementById('total-screened').innerText = totalTests.toLocaleString();
+            document.getElementById('total-pos').innerText = totalPositive.toLocaleString();
+            document.getElementById('total-neg').innerText = stats.neg.toLocaleString();
+            document.getElementById('total-invalid').innerText = stats.invalid.toLocaleString();
+            
+            const getRate = (v) => ((v/totalTests)*100 || 0).toFixed(1) + '%';
+            document.getElementById('pos-percent').innerText = getRate(totalPositive);
+            document.getElementById('neg-percent').innerText = getRate(stats.neg);
+
+            renderCharts(stats);
+        }
+
+        function parseNum(v) {
+            if (!v) return 0;
+            return parseInt(v.replace(/,/g, '')) || 0;
+        }
+
+        function renderCharts(s) {
+            if (chartInstances.pie) chartInstances.pie.destroy();
+            chartInstances.pie = new Chart(document.getElementById('typePieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Negative', 'HPV 16', 'HPV 18', 'Other HR', 'Invalid', 'LBC'],
+                    datasets: [{
+                        data: [s.neg, s.pos16, s.pos18, s.posOther, s.invalid, s.lbc],
+                        backgroundColor: ['#10b981', '#e11d48', '#fb7185', '#fb923c', '#94a3b8', '#818cf8'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    maintainAspectRatio: false, 
+                    cutout: '70%',
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { usePointStyle: true, padding: 15, font: { size: 11 } } 
+                        } 
+                    } 
+                }
+            });
+
+            if (chartInstances.bar) chartInstances.bar.destroy();
+            
+            const chartData = s.hospitals.slice(0, 15); 
+
+            chartInstances.bar = new Chart(document.getElementById('hospitalBarChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(h => h.name.length > 15 ? h.name.substring(0,12)+'...' : h.name),
+                    datasets: [
+                        { label: 'HPV 16', data: chartData.map(h => h.n16), backgroundColor: '#e11d48' },
+                        { label: 'HPV 18', data: chartData.map(h => h.n18), backgroundColor: '#fb7185' },
+                        { label: 'Other HR', data: chartData.map(h => h.nOther), backgroundColor: '#fb923c' },
+                        { label: 'Negative', data: chartData.map(h => h.nNeg), backgroundColor: '#10b981' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        x: { stacked: true, grid: { display: false } }, 
+                        y: { stacked: true, grid: { color: '#f1f5f9' } } 
+                    },
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { usePointStyle: true } },
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('tableSearch').addEventListener('input', function() {
+            const val = this.value.toLowerCase();
+            document.querySelectorAll('#data-table-body tr').forEach(row => {
+                row.style.display = row.cells[0].innerText.toLowerCase().includes(val) ? '' : 'none';
+            });
+        });
+
+        window.onload = fetchData;
+        setInterval(fetchData, 60000);
+    </script>
+</body>
+</html>
