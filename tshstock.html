@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TSH/PKU Stock Manager (Multi-Inventory)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        html { font-size: 18px; }
+        @media (max-width: 640px) {
+            html { font-size: 16px; }
+        }
+        .card-shadow {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+        }
+        .loading-overlay { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); }
+        .tab-active { @apply bg-white shadow-md text-blue-600 border border-blue-100; }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 z-[100] loading-overlay flex flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mb-4"></div>
+        <p id="loadingText" class="font-bold text-slate-600 text-lg">กำลังประมวลผล...</p>
+    </div>
+
+    <!-- Header -->
+    <nav class="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-2xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-xl text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-none">คลัง TSH/PKU</h1>
+                    <span id="syncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Checking...</span>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <button onclick="toggleMenu(event)" class="p-2 bg-slate-100 rounded-lg text-slate-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <div id="navDropdown" class="hidden absolute right-6 top-16 w-56 bg-white rounded-2xl shadow-2xl border border-slate-100 py-2 z-50">
+                    <button onclick="showPage(1)" class="w-full text-left px-4 py-3 hover:bg-blue-50 font-bold text-slate-700">📨 ส่งตรวจ (รายใบ)</button>
+                    <button onclick="showPage(2)" class="w-full text-left px-4 py-3 hover:bg-blue-50 font-bold text-slate-700">📦 จัดการสต็อค/เบิก</button>
+                    <button onclick="showPage(3)" class="w-full text-left px-4 py-3 hover:bg-blue-50 font-bold text-slate-700">📊 ยอดคงเหลือแยกหน่วย</button>
+                    <hr class="my-2">
+                    <button onclick="fetchFromSheet()" class="w-full text-left px-4 py-3 text-blue-600 font-bold">🔄 Sync ข้อมูล Cloud</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-2xl mx-auto px-4 mt-6">
+        
+        <!-- Page 1: Sending -->
+        <div id="page1" class="page-content space-y-6">
+            <div class="bg-white rounded-[2rem] p-6 card-shadow border border-slate-100">
+                <h2 class="text-xl font-bold text-slate-700 mb-6 flex items-center">
+                    <span class="mr-2">📨</span> ส่งตรวจ (รายใบ)
+                </h2>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-400 ml-1">วันที่</label>
+                            <input type="text" id="dateInput1" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-400 ml-1">เลข HN</label>
+                            <input type="text" id="hnInput" placeholder="ระบุ HN" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none font-bold text-emerald-600">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 ml-1">รหัสกระดาษ</label>
+                        <input type="text" id="codeSingle" oninput="autoFetchUnit()" placeholder="ระบุรหัส เช่น 001/0169" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none font-bold">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-xs font-bold text-slate-400 ml-1">หน่วยงานต้นทาง (ระบบค้นหาอัตโนมัติ)</label>
+                        <div class="relative">
+                            <input type="text" id="noteInput1" placeholder="พิมพ์รหัสเพื่อหาหน่วยงาน" readonly class="w-full p-3 bg-slate-100 rounded-xl border border-slate-200 outline-none font-bold text-blue-600">
+                            <div id="unitStatus" class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold"></div>
+                        </div>
+                    </div>
+
+                    <button onclick="saveTransaction('send')" class="w-full bg-slate-900 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg mt-2">
+                        บันทึกส่งตรวจ
+                    </button>
+                    <p class="text-[10px] text-center text-slate-400">*หากไม่พบหน่วยงาน จะบันทึกข้อมูลแต่ไม่หักสต็อค</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 2: Stock Management -->
+        <div id="page2" class="page-content hidden space-y-6">
+            <div class="bg-white rounded-[2rem] p-6 card-shadow border border-slate-100">
+                <div class="flex p-1 bg-slate-100 rounded-2xl mb-6">
+                    <button id="subBtnIn" onclick="switchStockMode('in')" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all bg-white shadow-sm text-blue-600 border border-blue-50">📥 รับเข้า</button>
+                    <button id="subBtnWithdraw" onclick="switchStockMode('withdraw')" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">📤 กระจายไปหน่วย</button>
+                    <button id="subBtnQuickDeduct" onclick="switchStockMode('quick')" class="flex-1 py-2 rounded-xl text-sm font-bold transition-all text-slate-500">✂️ ตัดด่วน</button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-400 ml-1">วันที่</label>
+                            <input type="text" id="dateInput2" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-bold text-slate-400 ml-1">จำนวน (ใบ)</label>
+                            <input type="number" id="quantityInput" placeholder="0" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none font-black text-blue-600">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label id="codeRangeLabel" class="text-xs font-bold text-slate-400 ml-1">รหัสกระดาษ (เริ่ม - ถึง)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="codeStart" oninput="autoCalcQty()" placeholder="เริ่ม" class="p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none font-bold">
+                            <input type="text" id="codeEnd" oninput="autoCalcQty()" placeholder="ถึง" class="p-3 bg-slate-50 rounded-xl border border-slate-200 outline-none font-bold">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label id="sourceLabel" class="text-xs font-bold text-slate-400 ml-1">เป้าหมาย/แหล่งที่มา</label>
+                        <div id="noteSelectContainer2">
+                            <select id="noteSelect2" onchange="handleSelectChange(2)" class="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none font-bold text-slate-700">
+                                <option value="" disabled selected>เลือกหน่วยงาน</option>
+                                <option value="พิเศษชั้น6">พิเศษชั้น 6</option>
+                                <option value="นรีเวช">นรีเวช</option>
+                                <option value="NICU">NICU</option>
+                                <option value="OPDเด็ก">OPD เด็ก</option>
+                                <option value="other">อื่นๆ (ระบุเอง)</option>
+                            </select>
+                        </div>
+                        <input type="text" id="noteInput2" value="ศิริราช" readonly class="hidden w-full p-3 bg-slate-100 rounded-xl border border-slate-200 outline-none font-bold text-slate-500 mt-2">
+                    </div>
+
+                    <button id="stockSubmitBtn" onclick="saveTransaction(currentStockMode)" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg mt-2">
+                        บันทึกรายการ
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Page 3: Summary -->
+        <div id="page3" class="page-content hidden space-y-4">
+            <div class="bg-white rounded-[2rem] p-6 card-shadow border border-slate-100">
+                <h2 class="text-lg font-bold text-slate-700 mb-4">📊 ยอดคงเหลือแยกตามหน่วยงาน</h2>
+                <div id="stockSummary" class="space-y-3">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+        </div>
+
+        <!-- History -->
+        <div id="historySection" class="mt-8 space-y-4">
+            <div class="flex items-center justify-between px-2">
+                <h3 class="font-bold text-slate-500 text-sm uppercase tracking-widest">ประวัติล่าสุด</h3>
+                <span id="totalCentralStock" class="text-xs font-bold text-blue-500">คลังกลาง: 0 ใบ</span>
+            </div>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none z-[60] text-sm font-bold"></div>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyCCJG1qb3C3y_vw_DvTXqRUUjFsMAAolWoLLXYZqz-vGBzadhR5SqVVDAbjCOByh4G/exec"; 
+        const STORAGE_KEY = 'tsh_pku_v14_multistock';
+        const NOT_FOUND_LABEL = "ไม่พบหน่วยงาน (ไม่ตัดสต็อค)";
+        let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let currentStockMode = 'in';
+
+        window.onload = function() {
+            setTodayDate();
+            fetchFromSheet();
+        };
+
+        function setTodayDate() {
+            const today = new Date();
+            const formatted = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear() + 543}`;
+            document.getElementById('dateInput1').value = formatted;
+            document.getElementById('dateInput2').value = formatted;
+        }
+
+        async function fetchFromSheet() {
+            showLoading("กำลังซิงค์ข้อมูล Cloud...");
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                if (data && Array.isArray(data)) {
+                    transactions = data.reverse();
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+                    updateStatus(true);
+                }
+            } catch (err) {
+                console.error(err);
+                updateStatus(false);
+            } finally {
+                render();
+                hideLoading();
+            }
+        }
+
+        function updateStatus(online) {
+            const el = document.getElementById('syncStatus');
+            el.innerText = online ? "ONLINE (Synced)" : "OFFLINE MODE";
+            el.className = `text-[10px] font-bold uppercase tracking-widest ${online ? 'text-emerald-500' : 'text-red-500'}`;
+        }
+
+        function showPage(num) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page' + num).classList.remove('hidden');
+            document.getElementById('navDropdown').classList.add('hidden');
+            window.scrollTo({top:0, behavior:'smooth'});
+            render(); 
+        }
+
+        function switchStockMode(mode) {
+            currentStockMode = mode;
+            const btnIn = document.getElementById('subBtnIn');
+            const btnW = document.getElementById('subBtnWithdraw');
+            const btnQ = document.getElementById('subBtnQuickDeduct');
+            const noteInput = document.getElementById('noteInput2');
+            const noteSelect = document.getElementById('noteSelectContainer2');
+            const submitBtn = document.getElementById('stockSubmitBtn');
+
+            [btnIn, btnW, btnQ].forEach(b => b.className = "flex-1 py-2 rounded-xl text-sm font-bold transition-all text-slate-500");
+
+            if(mode === 'in') {
+                btnIn.className = "flex-1 py-2 rounded-xl text-sm font-bold bg-white shadow-sm text-blue-600 border border-blue-50";
+                noteInput.value = "ศิริราช";
+                noteInput.classList.remove('hidden');
+                noteSelect.classList.add('hidden');
+                submitBtn.className = "w-full bg-blue-600 text-white font-bold py-4 rounded-xl text-lg mt-2";
+                submitBtn.innerText = "รับเข้าคลังกลาง";
+            } else if (mode === 'withdraw') {
+                btnW.className = "flex-1 py-2 rounded-xl text-sm font-bold bg-white shadow-sm text-orange-600 border border-orange-50";
+                noteInput.classList.add('hidden');
+                noteSelect.classList.remove('hidden');
+                submitBtn.className = "w-full bg-orange-500 text-white font-bold py-4 rounded-xl text-lg mt-2";
+                submitBtn.innerText = "กระจายไปหน่วยงาน";
+            } else {
+                btnQ.className = "flex-1 py-2 rounded-xl text-sm font-bold bg-white shadow-sm text-red-600 border border-red-50";
+                noteInput.classList.add('hidden');
+                noteSelect.classList.remove('hidden');
+                submitBtn.className = "w-full bg-red-600 text-white font-bold py-4 rounded-xl text-lg mt-2";
+                submitBtn.innerText = "ตัดสต็อคด่วน (รายหน่วย)";
+            }
+        }
+
+        function handleSelectChange(p) {
+            const sel = document.getElementById('noteSelect' + p);
+            const inp = document.getElementById('noteInput' + p);
+            if(sel.value === 'other') { inp.classList.remove('hidden'); inp.value = ""; inp.focus(); }
+            else { inp.classList.add('hidden'); inp.value = sel.value; }
+        }
+
+        function autoCalcQty() {
+            const s = document.getElementById('codeStart').value;
+            const e = document.getElementById('codeEnd').value;
+            if (s.includes('/') && e.includes('/')) {
+                const sN = parseInt(s.split('/')[0]);
+                const eN = parseInt(e.split('/')[0]);
+                if(!isNaN(sN) && !isNaN(eN)) document.getElementById('quantityInput').value = Math.abs(eN - sN) + 1;
+            }
+        }
+
+        function autoFetchUnit() {
+            const code = document.getElementById('codeSingle').value.trim();
+            const noteDisplay = document.getElementById('noteInput1');
+            const status = document.getElementById('unitStatus');
+            if(!code) { noteDisplay.value = ""; status.innerText = ""; return; }
+
+            const found = transactions.find(t => {
+                if(t.type !== 'withdraw') return false;
+                if(t.code.includes('-')) {
+                    const [s, e] = t.code.split('-');
+                    const sN = parseInt(s.split('/')[0]);
+                    const eN = parseInt(e.split('/')[0]);
+                    const cN = parseInt(code.split('/')[0]);
+                    const suf = s.split('/')[1];
+                    return code.split('/')[1] === suf && cN >= sN && cN <= eN;
+                }
+                return t.code === code;
+            });
+
+            if(found) {
+                noteDisplay.value = found.note;
+                status.innerText = "✅ อยู่ที่: " + found.note;
+                status.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-emerald-500";
+            } else {
+                noteDisplay.value = NOT_FOUND_LABEL;
+                status.innerText = "❓ ไม่พบหน่วยงาน";
+                status.className = "absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400";
+            }
+        }
+
+        async function saveTransaction(type) {
+            const page = (type === 'send') ? 1 : 2;
+            const date = document.getElementById('dateInput' + page).value;
+            const note = document.getElementById('noteInput' + page).value;
+
+            if(!note || !date) return showToast("⚠️ กรุณาระบุข้อมูลให้ครบ", "bg-orange-500");
+
+            let data = { action: 'add', date, type, note };
+
+            if(type === 'send') {
+                data.hn = document.getElementById('hnInput').value;
+                data.code = document.getElementById('codeSingle').value;
+                data.quantity = 1;
+                if(!data.hn || !data.code) return showToast("⚠️ ระบุ HN และรหัสกระดาษ");
+            } else {
+                data.quantity = parseInt(document.getElementById('quantityInput').value);
+                const s = document.getElementById('codeStart').value;
+                const e = document.getElementById('codeEnd').value;
+                data.code = (s && e) ? `${s}-${e}` : (s || "-");
+                if(!data.quantity) return showToast("⚠️ ระบุจำนวน");
+            }
+
+            showLoading("กำลังส่งข้อมูล...");
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data), mode: 'no-cors' });
+                showToast("✅ บันทึกสำเร็จ");
+                if(page === 1) { 
+                    document.getElementById('hnInput').value = ""; 
+                    document.getElementById('codeSingle').value = ""; 
+                    document.getElementById('noteInput1').value = ""; 
+                    document.getElementById('unitStatus').innerText = "";
+                } else {
+                    document.getElementById('quantityInput').value = "";
+                    document.getElementById('codeStart').value = "";
+                    document.getElementById('codeEnd').value = "";
+                }
+                setTimeout(fetchFromSheet, 1000);
+            } catch (err) {
+                showToast("❌ ผิดพลาด", "bg-red-500");
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function render() {
+            const list = document.getElementById('historyList');
+            const summary = document.getElementById('stockSummary');
+            const centralEl = document.getElementById('totalCentralStock');
+            list.innerHTML = "";
+            summary.innerHTML = "";
+
+            let stocks = { "คลังกลาง": 0 };
+            
+            transactions.slice().reverse().forEach(t => {
+                const qty = parseInt(t.quantity) || 0;
+                
+                if (t.type === 'in') {
+                    stocks["คลังกลาง"] += qty;
+                } else if (t.type === 'withdraw') {
+                    stocks["คลังกลาง"] -= qty;
+                    stocks[t.note] = (stocks[t.note] || 0) + qty;
+                } else if (t.type === 'send' || t.type === 'quick') {
+                    // กฎใหม่: ถ้าเป็น NOT_FOUND_LABEL จะไม่ตัดยอดที่ไหนเลย
+                    if (t.note !== NOT_FOUND_LABEL) {
+                        stocks[t.note] = (stocks[t.note] || 0) - qty;
+                    }
+                }
+
+                let icon = '📦';
+                let color = 'text-blue-600';
+                let displayNote = t.note;
+                
+                if(t.type === 'withdraw') { icon = '📤'; color = 'text-orange-600'; }
+                else if(t.type === 'send') { icon = '📨'; color = 'text-emerald-600'; }
+                else if(t.type === 'quick') { icon = '✂️'; color = 'text-red-600'; }
+
+                // หากเป็นรายการที่ไม่ตัดสต็อค ให้แสดงสีเทาในประวัติเพื่อให้เห็นความแตกต่าง
+                const isNoDeduct = t.note === NOT_FOUND_LABEL;
+                const opacityClass = isNoDeduct ? 'opacity-60' : '';
+                const qtyDisplay = isNoDeduct ? '0' : `-${qty}`;
+
+                const card = `
+                    <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm ${opacityClass}">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-2xl p-2 bg-slate-50 rounded-xl">${icon}</div>
+                            <div>
+                                <div class="text-[10px] font-bold text-slate-400 uppercase">${t.date} ${t.hn ? '| HN:'+t.hn : ''}</div>
+                                <div class="font-bold text-slate-700 leading-tight">${displayNote}</div>
+                                <div class="text-[10px] text-slate-400 italic">Code: ${t.code}</div>
+                            </div>
+                        </div>
+                        <div class="text-lg font-black ${isNoDeduct ? 'text-slate-300' : color}">
+                            ${(t.type === 'in' || (t.type === 'withdraw' && t.note !== "คลังกลาง")) ? '+' : (isNoDeduct ? '' : '-')}${isNoDeduct ? '0' : qty}
+                        </div>
+                    </div>
+                `;
+                list.insertAdjacentHTML('afterbegin', card);
+            });
+
+            centralEl.innerText = `คลังกลาง: ${stocks["คลังกลาง"]} ใบ`;
+            Object.keys(stocks).forEach(unit => {
+                if(unit === "คลังกลาง" || unit === NOT_FOUND_LABEL) return;
+                const barColor = stocks[unit] < 5 ? 'bg-red-500' : 'bg-blue-500';
+                const row = `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span class="text-slate-600">${unit}</span>
+                            <span class="${stocks[unit] < 5 ? 'text-red-600' : 'text-slate-500'}">${stocks[unit]} ใบ</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="${barColor} h-full" style="width: ${Math.min(stocks[unit]*2, 100)}%"></div>
+                        </div>
+                    </div>
+                `;
+                summary.insertAdjacentHTML('beforeend', row);
+            });
+
+            if(!transactions.length) list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">ไม่มีข้อมูล</div>`;
+        }
+
+        function toggleMenu(e) { e.stopPropagation(); document.getElementById('navDropdown').classList.toggle('hidden'); }
+        window.onclick = () => document.getElementById('navDropdown').classList.add('hidden');
+        function showLoading(t) { document.getElementById('loadingText').innerText = t; document.getElementById('loadingOverlay').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('loadingOverlay').classList.add('hidden'); }
+        function showToast(m, b="bg-slate-800") {
+            const t = document.getElementById('toast');
+            t.innerText = m; t.className = `fixed bottom-10 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-full shadow-2xl transition-opacity z-[60] text-sm font-bold ${b}`;
+            t.style.opacity = "1"; setTimeout(() => t.style.opacity = "0", 2000);
+        }
+    </script>
+</body>
+</html>
