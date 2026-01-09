@@ -37,13 +37,6 @@
             height: 250px;
             width: 100%;
         }
-        .delete-btn {
-            transition: all 0.2s;
-        }
-        .delete-btn:active {
-            transform: scale(0.9);
-            background-color: #fee2e2;
-        }
         .auto-label {
             cursor: default;
             user-select: none;
@@ -161,7 +154,6 @@
                         </div>
                     </div>
 
-                    <!-- Exclude Field: Hidden by default, shown only in withdraw/quick modes -->
                     <div id="excludeContainer" class="hidden space-y-1">
                         <label class="text-xs font-bold text-slate-400 ml-1">ยกเว้นรหัส (ระบุเลขหน้า / คั่นด้วยคอมม่า)</label>
                         <input type="text" id="excludeCodes" oninput="autoCalcQty()" placeholder="เช่น 21, 33, 43" class="w-full p-3 bg-red-50/50 rounded-xl border border-red-100 outline-none font-bold text-red-500">
@@ -210,18 +202,6 @@
         </div>
     </main>
 
-    <!-- Modal Confirmation -->
-    <div id="confirmModal" class="hidden fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-        <div class="bg-white rounded-[2rem] w-full max-w-xs p-6 shadow-2xl scale-95 animate-in zoom-in duration-200">
-            <h4 class="text-xl font-bold text-slate-800 mb-2">ยืนยันการลบ?</h4>
-            <p class="text-slate-500 text-sm mb-6">คุณกำลังจะลบรายการนี้ออกจากระบบ</p>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="closeConfirm()" class="py-3 bg-slate-100 rounded-xl font-bold text-slate-600">ยกเลิก</button>
-                <button id="confirmDeleteBtn" class="py-3 bg-red-600 rounded-xl font-bold text-white shadow-lg shadow-red-200">ลบข้อมูล</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Toast -->
     <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl opacity-0 transition-opacity pointer-events-none z-[60] text-sm font-bold"></div>
 
@@ -234,7 +214,6 @@
         let unitInventory = {}; 
         let currentStockMode = 'in';
         let stockChart = null;
-        let deleteTargetIndex = null;
 
         window.onload = function() {
             setTodayDate();
@@ -312,19 +291,19 @@
                 noteInput.value = "ศิริราช";
                 noteInput.classList.remove('hidden');
                 noteSelect.classList.add('hidden');
-                excludeContainer.classList.add('hidden'); // ซ่อนช่องยกเว้นในโหมดรับเข้า
+                excludeContainer.classList.add('hidden');
                 submitBtn.innerText = "รับเข้าคลังกลาง";
-                document.getElementById('excludeCodes').value = ""; // ล้างค่าเมื่อเข้าโหมดรับเข้า
+                document.getElementById('excludeCodes').value = "";
             } else {
                 const isWithdraw = mode === 'withdraw';
                 const activeClass = isWithdraw ? "text-orange-600 border-orange-100 shadow-sm bg-white" : "text-red-600 border-red-100 shadow-sm bg-white";
                 (isWithdraw ? btnW : btnQ).className = `flex-1 py-2 rounded-xl text-sm font-bold border ${activeClass}`;
                 noteInput.classList.add('hidden');
                 noteSelect.classList.remove('hidden');
-                excludeContainer.classList.remove('hidden'); // แสดงช่องยกเว้นในโหมดกระจาย/ตัดด่วน
+                excludeContainer.classList.remove('hidden');
                 submitBtn.innerText = isWithdraw ? "กระจายไปหน่วยงาน" : "ตัดสต็อคด่วน (รายหน่วย)";
             }
-            autoCalcQty(); // รีเซ็ตยอดคำนวณ
+            autoCalcQty();
         }
 
         function handleSelectChange(p) {
@@ -345,17 +324,13 @@
                 const eN = parseInt(e.split('/')[0]);
                 if(!isNaN(sN) && !isNaN(eN)) {
                     let total = Math.abs(eN - sN) + 1;
-                    
-                    // คำนวณหักรหัสที่ยกเว้น (เฉพาะเมื่อฟิลด์แสดงอยู่)
                     if(!excludeIsHidden && excludeStr.trim()) {
                         const excludes = excludeStr.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
                         const min = Math.min(sN, eN);
                         const max = Math.max(sN, eN);
-                        // กรองเอาเฉพาะเลขที่อยู่ในช่วง Range จริงๆ
                         const actualExcludes = [...new Set(excludes)].filter(v => v >= min && v <= max);
                         total -= actualExcludes.length;
                     }
-                    
                     document.getElementById('quantityInput').value = total > 0 ? total : 0;
                 }
             } else {
@@ -365,7 +340,6 @@
 
         function parseCodeToItems(codeStr) {
             if(!codeStr || codeStr === '-') return [];
-            
             let excludeList = [];
             let mainPart = codeStr;
             if(codeStr.includes('!')) {
@@ -373,7 +347,6 @@
                 mainPart = parts[0];
                 excludeList = parts[1].split(',').map(v => v.trim());
             }
-
             if(mainPart.includes('-')) {
                 const parts = mainPart.split('-');
                 const sParts = parts[0].trim().split('/');
@@ -420,13 +393,11 @@
             const noteDisplay = document.getElementById('noteInput1');
             const status = document.getElementById('unitStatus');
             if(!codeRaw) { noteDisplay.value = ""; status.innerText = ""; return; }
-            
             let searchCode = codeRaw;
             if (codeRaw.includes('/')) {
                 let [n, s] = codeRaw.split('/');
                 if(!isNaN(n) && n.length > 0) searchCode = `${n.padStart(3, '0')}/${s}`;
             }
-
             let found = Object.keys(unitInventory).find(u => u !== "คลังกลาง" && unitInventory[u].has(searchCode));
             if(found) {
                 noteDisplay.value = found;
@@ -444,7 +415,6 @@
             const date = document.getElementById('dateInput' + page).value;
             const note = document.getElementById('noteInput' + page).value;
             if(!note || !date) return showToast("⚠️ ระบุข้อมูลไม่ครบ", "bg-orange-500");
-            
             let data = { action: 'add', date, type, note };
             if(type === 'send') {
                 data.hn = document.getElementById('hnInput').value;
@@ -457,18 +427,14 @@
                 const e = document.getElementById('codeEnd').value;
                 const exContainer = document.getElementById('excludeContainer');
                 const ex = document.getElementById('excludeCodes').value.trim();
-                
                 let codeVal = (s && e) ? `${s}-${e}` : (s || "-");
-                // เก็บค่า Exclude เฉพาะเมื่อมีการแสดงฟิลด์นี้เท่านั้น
                 if(!exContainer.classList.contains('hidden') && ex) {
                     const cleanEx = ex.split(',').map(v => v.trim().padStart(3, '0')).filter(v => v !== '000').join(',');
                     if(cleanEx) codeVal += `!${cleanEx}`;
                 }
                 data.code = codeVal;
-                
                 if(!data.quantity || data.quantity <= 0) return showToast("⚠️ ระบุจำนวนที่ถูกต้อง");
             }
-            
             showLoading("กำลังบันทึก...");
             try {
                 await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data), mode: 'no-cors' });
@@ -486,33 +452,6 @@
                 }
                 fetchFromSheet();
             } catch (err) { showToast("❌ ผิดพลาด", "bg-red-500"); } finally { hideLoading(); }
-        }
-
-        function confirmDelete(rowIndex) {
-            deleteTargetIndex = rowIndex;
-            document.getElementById('confirmModal').classList.remove('hidden');
-            document.getElementById('confirmDeleteBtn').onclick = executeDelete;
-        }
-
-        function closeConfirm() {
-            document.getElementById('confirmModal').classList.add('hidden');
-            deleteTargetIndex = null;
-        }
-
-        async function executeDelete() {
-            if (!deleteTargetIndex) return;
-            closeConfirm();
-            showLoading("กำลังลบข้อมูล...");
-            try {
-                const data = { action: 'deleteAt', row: deleteTargetIndex };
-                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(data), mode: 'no-cors' });
-                showToast("🗑️ ลบรายการแล้ว");
-                setTimeout(fetchFromSheet, 800);
-            } catch (err) {
-                showToast("❌ ลบไม่สำเร็จ", "bg-red-500");
-            } finally {
-                hideLoading();
-            }
         }
 
         function updateChart(chartData) {
@@ -564,7 +503,7 @@
 
                 list.insertAdjacentHTML('beforeend', `
                     <div class="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm relative group overflow-hidden ${isNoDeduct ? 'opacity-60' : ''}">
-                        <div class="flex items-center space-x-3 overflow-hidden pr-8">
+                        <div class="flex items-center space-x-3 overflow-hidden">
                             <div class="text-xl p-2 bg-slate-50 rounded-xl flex-shrink-0">${icon}</div>
                             <div class="truncate">
                                 <div class="text-[9px] font-bold text-slate-400 uppercase">${t.date} ${t.hn ? '| HN:'+t.hn : ''}</div>
@@ -572,15 +511,10 @@
                                 <div class="text-[9px] text-slate-400 italic">Code: ${t.code}</div>
                             </div>
                         </div>
-                        <div class="flex items-center space-x-3">
+                        <div class="flex items-center">
                             <div class="text-lg font-black ${isNoDeduct ? 'text-slate-300' : color}">
                                 ${(t.type === 'in' || (t.type === 'withdraw' && t.note !== "คลังกลาง")) ? '+' : (isNoDeduct ? '' : '-')}${isNoDeduct ? '0' : t.quantity}
                             </div>
-                            <button onclick="confirmDelete(${t.sheetRow})" class="delete-btn p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                            </button>
                         </div>
                     </div>
                 `);
