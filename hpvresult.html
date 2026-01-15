@@ -24,6 +24,11 @@
         /* Table enhancements */
         table { font-family: 'Kanit', sans-serif; }
         th { @apply whitespace-nowrap; }
+        
+        /* Link Icon Style */
+        .link-icon {
+            @apply inline-flex items-center justify-center ml-2 p-1.5 rounded-md bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-all duration-200;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -37,7 +42,6 @@
                     <p class="text-pink-100 mt-2 text-lg">รายงานผลการตรวจแยกตามประเภทและความผิดปกติ</p>
                 </div>
                 
-                <!-- Navigation Buttons Cluster -->
                 <div class="flex bg-black/20 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
                     <a href="hpvstock.html" class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/20 flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,6 +147,23 @@
         const GID = '1541013318';
         const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${GID}`;
 
+        // จัดการลิงก์หน่วยงานที่นี่
+        const hospitalLinks = {
+            "รพ.หนองหญ้าปล้อง": "https://drive.google.com/drive/folders/1gWWliXgVGtzGYhvcmCoJYLyHonkufGZp?usp=drive_link",
+            "รพ.เขาย้อย": "https://drive.google.com/drive/folders/1oSuIKWRFVmJQk9xxKTKXnGGk4ELpJRlR?usp=drive_link",
+            "รพ.ชะอำ": "https://drive.google.com/drive/folders/1SlLNxcyIhVhk4AA493akVfqr6QRuywCQ?usp=drive_link",
+            "รพ.สต.บ้านห้วย": "https://drive.google.com/drive/folders/1fxK4cEZck3hT47yFi-20Nr5M_6lsh50o?usp=drive_link",
+            "รพ.สต.บ้านพุม่วง": "https://drive.google.com/drive/folders/1pI_AdDJ7bPs5p9uMuUvFdaQkpDCvPEvm?usp=drive_link",
+            "รพ.สต.บ้านหนองปืนแตก": "https://drive.google.com/drive/folders/16cxpd18rTcI_JbxFhO-FgFJEb-H02UBQ?usp=drive_link",
+            "รพ.ท่ายาง": "https://drive.google.com/drive/folders/1pHf_dRzDTznfSXgXx-vu2kcxSwnVEaRS?usp=drive_link",
+            "รพ.แก่งกระจาน": "https://drive.google.com/drive/folders/1MUsAtlO7t6fi3s111KBHK0bXk-fHul1e?usp=drive_link",
+            "รพ.สต.บ้านเขากลิ้ง": "https://drive.google.com/drive/folders/18USD8bGakAyJJ79r74VncZqSgO_wk5Sg?usp=drive_link",
+            "รพ.บ้านแหลม": "https://drive.google.com/drive/folders/1J5wR7L4s_PHkQqGZOjAjGZO5ZY9cHd9G?usp=drive_link",
+            "รพ.สต.บ้านฝั่งท่า": "https://drive.google.com/drive/folders/1gVecH1NWujqc22nifl8TPJU1sQPaiDEI?usp=drive_link",
+            "รพ.สต.บ้านซ่อง": "https://drive.google.com/drive/folders/1PgCZJBIPLAgqg8Cajc6EoisNJQKCXtf0?usp=drive_link",
+            // เพิ่มลิงก์หน่วยงานอื่นๆ ได้ตามรูปแบบด้านบน
+        };
+
         let chartInstances = {};
 
         async function fetchData() {
@@ -227,8 +248,21 @@
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
+
+                // จัดการส่วนชื่อหน่วยงานและลิงก์
+                const link = hospitalLinks[h.name];
+                const linkHtml = link ? 
+                    `<a href="${link}" target="_blank" class="link-icon" title="เปิด Google Drive ของ ${h.name}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                        </svg>
+                    </a>` : '';
+
                 tr.innerHTML = `
-                    <td class="px-6 py-3 font-medium border-r bg-slate-50/20 sticky left-0 z-10">${h.name}</td>
+                    <td class="px-6 py-3 font-medium border-r bg-slate-50/20 sticky left-0 z-10 flex items-center justify-between">
+                        <span>${h.name}</span>
+                        ${linkHtml}
+                    </td>
                     <td class="text-right px-4 border-r text-rose-600 font-bold">${h.s16 || '-'}</td>
                     <td class="text-right px-4 border-r text-rose-500 font-semibold">${h.s18 || '-'}</td>
                     <td class="text-right px-4 border-r text-orange-500">${h.sOther || '-'}</td>
