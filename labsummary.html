@@ -124,13 +124,16 @@
         let selectedYears = [];
         let charts = {};
 
+        // ปรับปรุง colorMap ให้ครอบคลุมป้ายกำกับทั้งหมด
         const colorMap = {
             '1.เคมีคลินิก': '#1e3a8a', '2.โลหิต': '#dc2626', '3.จุลทรรศน์': '#f59e0b',
             '4.ธนาคารเลือด': '#0ea5e9', '5.ภูมิคุ้มกัน': '#10b981', '6.จุลชีว': '#8b5cf6',
             '7.แลปพิเศษ': '#ec4899', 'รับบริจาคเลือด': '#ef4444', 'เตรียมเลือด': '#f87171',
             'เตรียมส่วนประกอบ': '#b91c1c', 'CD4': '#a855f7', 'RT- pcr': '#64748b', 'HPV DNA': '#10b981',
-            '8.เจาะเลือด (ราย)': '#f97316'
+            'RT-pcr': '#64748b', '8.เจาะเลือด (ราย)': '#f97316'
         };
+
+        const fallbackColors = ['#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#d946ef'];
 
         const outlabColors = ['#4f46e5', '#7c3aed', '#db2777', '#2563eb', '#059669', '#d97706', '#9333ea'];
         const mainOutlabHeaders = ["9.1", "9.2", "9.3", "9.4", "9.5", "9.6", "9.7"];
@@ -204,7 +207,7 @@
         }
 
         function processRows(rows) {
-            return rows.map(row => {
+            return rows.map((row, index) => {
                 const label = row[0];
                 if (!label || label === "" || label === "รายการ" || label.includes("ปีงบประมาณ") || label.includes("รวม")) return null;
                 const values = allYears.map(y => {
@@ -212,10 +215,21 @@
                     const cleanVal = rawVal.replace(/[^\d.]/g, '');
                     return cleanVal === "" ? 0 : parseFloat(cleanVal);
                 });
+
+                // ค้นหาสีจาก colorMap หรือใช้ fallback
+                let color = '#94a3b8'; // Default grey
+                for (const key in colorMap) {
+                    if (label.includes(key)) {
+                        color = colorMap[key];
+                        break;
+                    }
+                }
+                if (color === '#94a3b8') color = fallbackColors[index % fallbackColors.length];
+
                 return {
                     label: label,
                     data: values,
-                    color: colorMap[label] || '#94a3b8'
+                    color: color
                 };
             }).filter(item => item !== null);
         }
@@ -245,7 +259,7 @@
         function updateAll() {
             const mainKeys = ['1.เคมีคลินิก', '2.โลหิต', '3.จุลทรรศน์', '4.ธนาคารเลือด', '5.ภูมิคุ้มกัน', '6.จุลชีว', '7.แลปพิเศษ'];
             const bloodKeys = ['รับบริจาคเลือด', 'เตรียมเลือด', 'เตรียมส่วนประกอบ'];
-            const specialKeys = ['CD4', 'RT- pcr', 'HPV DNA'];
+            const specialKeys = ['CD4', 'RT- pcr', 'RT-pcr', 'HPV DNA'];
             const drawKeys = ['8.เจาะเลือด (ราย)'];
 
             const fMain = getFiltered(rawData, mainKeys);
@@ -254,7 +268,6 @@
             const fDraw = getFiltered(rawData, drawKeys);
             const fOutlabAll = getFiltered(outlabData, [], true);
 
-            // กรองเฉพาะหัวข้อหลักสำหรับกราฟ
             const fOutlabChart = fOutlabAll.filter(d => mainOutlabHeaders.some(h => d.label.startsWith(h))).map((d, idx) => ({
                 ...d,
                 color: outlabColors[idx % outlabColors.length]
@@ -286,7 +299,7 @@
                 } else {
                     totals = datasets[0].data.map((_, i) => datasets.reduce((sum, d) => sum + d.data[i], 0));
                 }
-                html += `<tr class="font-bold bg-blue-50 text-blue-900"><td>ยอดรวมทั้งหมด (เฉพาะหัวข้อหลัก)</td>${totals.map(v => `<td>${v.toLocaleString()}</td>`).join('')}</tr>`;
+                html += `<tr class="font-bold bg-blue-50 text-blue-900"><td>ยอดรวมทั้งหมด</td>${totals.map(v => `<td>${v.toLocaleString()}</td>`).join('')}</tr>`;
             }
             document.getElementById(tbodyId).innerHTML = html;
         }
@@ -367,9 +380,9 @@
                 options: stackedBarOpts
             });
 
-            // Outlab Chart (Updated to Stacked with Line)
+            // Outlab Chart
             if (charts.outlabChart) charts.outlabChart.destroy();
-            const outlabTotals = fOutlab[0].data.map((_, i) => fOutlab.reduce((sum, d) => sum + d.data[i], 0));
+            const outlabTotals = fOutlab.length > 0 ? fOutlab[0].data.map((_, i) => fOutlab.reduce((sum, d) => sum + d.data[i], 0)) : [];
             charts.outlabChart = new Chart(document.getElementById('outlabChart'), {
                 type: 'bar',
                 data: {
@@ -382,7 +395,7 @@
                 options: stackedBarOpts
             });
 
-            // Other Charts
+            // Render Function for Normal Bar
             const renderBar = (id, datasets) => {
                 if (charts[id]) charts[id].destroy();
                 charts[id] = new Chart(document.getElementById(id), { 
