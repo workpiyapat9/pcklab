@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แดชบอร์ดสถิติบริการเทคนิคการแพทย์ 2560-2568</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8fafc; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-container { position: relative; height: 500px; width: 100%; }
+        .data-table-container { overflow-x: auto; margin-top: 1.5rem; border-radius: 0.75rem; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background-color: #f1f5f9; color: #1e293b; font-weight: 600; padding: 0.75rem; border: 1px solid #e2e8f0; text-align: center; font-size: 0.875rem; }
+        td { padding: 0.75rem; border: 1px solid #e2e8f0; text-align: right; color: #334155; font-size: 0.875rem; }
+        tr:nth-child(even) { background-color: #f8fafc; }
+        .label-cell { text-align: left; font-weight: 500; background-color: #f1f5f9; min-width: 220px; }
+        
+        .filter-checkbox:checked + label { background-color: #2563eb; color: white; border-color: #2563eb; }
+        .filter-checkbox + label { cursor: pointer; padding: 0.4rem 0.8rem; border-radius: 0.75rem; border: 2px solid #e2e8f0; font-weight: 600; color: #64748b; transition: all 0.2s; font-size: 0.75rem; }
+        
+        .tab-btn { 
+            padding: 0.5rem 1.5rem; 
+            border-radius: 9999px; 
+            font-weight: 600; 
+            transition: all 0.2s; 
+            border: 1px solid #e2e8f0;
+            background-color: white;
+            color: #64748b;
+        }
+        .tab-btn:hover { background-color: #f1f5f9; }
+        .tab-btn.active-tab { 
+            background-color: #2563eb !important; 
+            color: white !important; 
+            border-color: #2563eb !important;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div id="loading" class="loading-overlay">
+        <div class="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <div class="text-xl font-bold text-blue-600">กำลังดึงข้อมูลล่าสุด...</div>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 text-center">
+            <h1 class="text-3xl font-bold text-blue-900">สถิติบริการกลุ่มงานเทคนิคการแพทย์</h1>
+            <p class="text-slate-600 mt-2 text-lg">รพ.พระจอมเกล้าจังหวัดเพชรบุรี (ปีงบประมาณ 2560 - 2568)</p>
+        </header>
+
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col items-center">
+            <span class="text-slate-700 font-bold mb-4">เลือกช่วงปีงบประมาณที่ต้องการวิเคราะห์:</span>
+            <div class="flex flex-wrap justify-center gap-2" id="year-filters"></div>
+            <div class="mt-4 flex gap-4">
+                <button onclick="selectAllYears(true)" class="text-xs text-blue-600 hover:underline font-semibold">เลือกทั้งหมด</button>
+                <button onclick="selectAllYears(false)" class="text-xs text-slate-500 hover:underline font-semibold">เลือก 3 ปีล่าสุด</button>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap justify-center gap-3 mb-6">
+            <button onclick="showTab('trend')" id="btn-trend" class="tab-btn active-tab">งานบริการหลัก</button>
+            <button onclick="showTab('blood')" id="btn-blood" class="tab-btn">งานธนาคารเลือด</button>
+            <button onclick="showTab('special')" id="btn-special" class="tab-btn">แล็บพิเศษ/COVID</button>
+            <button onclick="showTab('pie')" id="btn-pie" class="tab-btn">สัดส่วนภาระงาน</button>
+            <button onclick="showTab('draw')" id="btn-draw" class="tab-btn">ห้องเจาะเลือด</button>
+            <button onclick="showTab('outlab')" id="btn-outlab" class="tab-btn">OUTLAB</button>
+        </div>
+
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 min-h-[600px]">
+            <!-- Tab Contents -->
+            <div id="tab-trend" class="tab-content active">
+                <h2 class="text-xl font-bold mb-6 text-blue-800 text-center">แนวโน้มภาระงานบริการหลัก (แยกส่วนรายแผนก)</h2>
+                <div class="chart-container"><canvas id="mainTrendChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr id="thead-trend"></tr></thead><tbody id="body-trend"></tbody></table></div>
+            </div>
+            <div id="tab-blood" class="tab-content">
+                <h2 class="text-xl font-bold mb-6 text-red-800 text-center">รายละเอียดงานธนาคารเลือด</h2>
+                <div class="chart-container"><canvas id="bloodBankDetailChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr id="thead-blood"></tr></thead><tbody id="body-blood"></tbody></table></div>
+            </div>
+            <div id="tab-special" class="tab-content">
+                <h2 class="text-xl font-bold mb-6 text-purple-800 text-center">แล็บพิเศษ และงานตรวจระบาดวิทยา</h2>
+                <div class="chart-container"><canvas id="specialLabTrendChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr id="thead-special"></tr></thead><tbody id="body-special"></tbody></table></div>
+            </div>
+            <div id="tab-pie" class="tab-content">
+                <h2 id="pie-title" class="text-xl font-bold mb-6 text-emerald-800 text-center">สัดส่วนงานบริการรายแผนก</h2>
+                <div class="chart-container"><canvas id="deptPieChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr><th>รายการแผนก</th><th>จำนวนครั้ง (Test)</th><th>ร้อยละ (%)</th></tr></thead><tbody id="body-pie"></tbody></table></div>
+            </div>
+            <div id="tab-draw" class="tab-content">
+                <h2 class="text-xl font-bold mb-6 text-orange-800 text-center">สถิติงานบริการห้องเจาะเลือด (ราย)</h2>
+                <div class="chart-container"><canvas id="bloodDrawingChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr id="thead-draw"></tr></thead><tbody id="body-draw"></tbody></table></div>
+            </div>
+            <div id="tab-outlab" class="tab-content">
+                <h2 class="text-xl font-bold mb-6 text-indigo-800 text-center">สถิติการส่งตรวจภายนอก (OUTLAB: 9.1 - 9.7)</h2>
+                <div class="chart-container"><canvas id="outlabChart"></canvas></div>
+                <div class="data-table-container"><table><thead><tr id="thead-outlab"></tr></thead><tbody id="body-outlab"></tbody></table></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.register(ChartDataLabels);
+
+        const BASE_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZDafLIgSgqJTAnZfP7ZD6qEpKP_xHxsN51YEWDe86ZZaRDS194X3ftICvhh4eR_EMb-bvYPU9V6Sf/pub?output=csv";
+        const OUTLAB_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZDafLIgSgqJTAnZfP7ZD6qEpKP_xHxsN51YEWDe86ZZaRDS194X3ftICvhh4eR_EMb-bvYPU9V6Sf/pub?gid=126847889&single=true&output=csv";
+        
+        let rawData = [];
+        let outlabData = [];
+        let allYears = []; 
+        let selectedYears = [];
+        let charts = {};
+
+        const colorMap = {
+            '1.เคมีคลินิก': '#1e3a8a', '2.โลหิต': '#dc2626', '3.จุลทรรศน์': '#f59e0b',
+            '4.ธนาคารเลือด': '#0ea5e9', '5.ภูมิคุ้มกัน': '#10b981', '6.จุลชีว': '#8b5cf6',
+            '7.แลปพิเศษ': '#ec4899', 'รับบริจาคเลือด': '#ef4444', 'เตรียมเลือด': '#f87171',
+            'เตรียมส่วนประกอบ': '#b91c1c', 'CD4': '#a855f7', 'RT- pcr': '#64748b', 'HPV DNA': '#10b981',
+            '8.เจาะเลือด (ราย)': '#f97316'
+        };
+
+        const outlabColors = ['#4f46e5', '#7c3aed', '#db2777', '#2563eb', '#059669', '#d97706', '#9333ea'];
+        const mainOutlabHeaders = ["9.1", "9.2", "9.3", "9.4", "9.5", "9.6", "9.7"];
+
+        async function init() {
+            try {
+                const resMain = await fetch(BASE_URL + "&t=" + new Date().getTime());
+                const csvMain = await resMain.text();
+                parseCSV(csvMain);
+
+                const resOut = await fetch(OUTLAB_URL + "&t=" + new Date().getTime());
+                const csvOut = await resOut.text();
+                parseOutlabCSV(csvOut);
+
+                document.getElementById('loading').style.display = 'none';
+                renderYearFilters();
+                updateAll();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loading').innerHTML = `<div class="text-red-500 font-bold p-10">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>`;
+            }
+        }
+
+        function parseCSV(text) {
+            const rows = splitCSV(text);
+            const yearRow = rows.find(r => r.some(cell => cell.includes('2560')));
+            if (yearRow) {
+                allYears = [];
+                yearRow.forEach((cell, idx) => {
+                    const cleanYear = cell.replace(/[^\d]/g, '');
+                    if (/^25\d{2}$/.test(cleanYear)) {
+                        allYears.push({ year: cleanYear, index: idx });
+                    }
+                });
+            }
+            selectedYears = allYears.map(y => y.year);
+            rawData = processRows(rows);
+        }
+
+        function parseOutlabCSV(text) {
+            const rows = splitCSV(text);
+            const outlabRows = rows.slice(4); 
+            outlabData = processRows(outlabRows);
+        }
+
+        function splitCSV(text) {
+            const rows = [];
+            let currentRow = [];
+            let currentField = '';
+            let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+                const char = text[i];
+                if (char === '"') inQuotes = !inQuotes;
+                else if (char === ',' && !inQuotes) {
+                    currentRow.push(currentField.trim());
+                    currentField = '';
+                } else if ((char === '\r' || char === '\n') && !inQuotes) {
+                    if (currentField || currentRow.length > 0) {
+                        currentRow.push(currentField.trim());
+                        rows.push(currentRow);
+                        currentRow = [];
+                        currentField = '';
+                    }
+                } else currentField += char;
+            }
+            if (currentField || currentRow.length > 0) {
+                currentRow.push(currentField.trim());
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        function processRows(rows) {
+            return rows.map(row => {
+                const label = row[0];
+                if (!label || label === "" || label === "รายการ" || label.includes("ปีงบประมาณ") || label.includes("รวม")) return null;
+                const values = allYears.map(y => {
+                    const rawVal = row[y.index] || "0";
+                    const cleanVal = rawVal.replace(/[^\d.]/g, '');
+                    return cleanVal === "" ? 0 : parseFloat(cleanVal);
+                });
+                return {
+                    label: label,
+                    data: values,
+                    color: colorMap[label] || '#94a3b8'
+                };
+            }).filter(item => item !== null);
+        }
+
+        function getFiltered(source, keywords, isOutlab = false) {
+            if (!isOutlab) {
+                return keywords.map(kw => {
+                    const item = source.find(d => d.label.includes(kw));
+                    if (!item) return null;
+                    const filteredValues = [];
+                    allYears.forEach((y, i) => {
+                        if (selectedYears.includes(y.year)) filteredValues.push(item.data[i]);
+                    });
+                    return { ...item, data: filteredValues };
+                }).filter(d => d !== null);
+            } else {
+                return source.map(item => {
+                    const filteredValues = [];
+                    allYears.forEach((y, i) => {
+                        if (selectedYears.includes(y.year)) filteredValues.push(item.data[i]);
+                    });
+                    return { ...item, data: filteredValues };
+                });
+            }
+        }
+
+        function updateAll() {
+            const mainKeys = ['1.เคมีคลินิก', '2.โลหิต', '3.จุลทรรศน์', '4.ธนาคารเลือด', '5.ภูมิคุ้มกัน', '6.จุลชีว', '7.แลปพิเศษ'];
+            const bloodKeys = ['รับบริจาคเลือด', 'เตรียมเลือด', 'เตรียมส่วนประกอบ'];
+            const specialKeys = ['CD4', 'RT- pcr', 'HPV DNA'];
+            const drawKeys = ['8.เจาะเลือด (ราย)'];
+
+            const fMain = getFiltered(rawData, mainKeys);
+            const fBlood = getFiltered(rawData, bloodKeys);
+            const fSpecial = getFiltered(rawData, specialKeys);
+            const fDraw = getFiltered(rawData, drawKeys);
+            const fOutlabAll = getFiltered(outlabData, [], true);
+
+            // กรองเฉพาะหัวข้อหลักสำหรับกราฟ
+            const fOutlabChart = fOutlabAll.filter(d => mainOutlabHeaders.some(h => d.label.startsWith(h))).map((d, idx) => ({
+                ...d,
+                color: outlabColors[idx % outlabColors.length]
+            }));
+
+            renderTable('thead-trend', 'body-trend', fMain, true);
+            renderTable('thead-blood', 'body-blood', fBlood);
+            renderTable('thead-special', 'body-special', fSpecial);
+            renderTable('thead-draw', 'body-draw', fDraw);
+            renderTable('thead-outlab', 'body-outlab', fOutlabAll, true, true); 
+            
+            updateCharts(fMain, fBlood, fSpecial, fDraw, fOutlabChart);
+            updatePie(fMain);
+        }
+
+        function renderTable(theadId, tbodyId, datasets, showTotal = false, isOutlab = false) {
+            document.getElementById(theadId).innerHTML = `<th>รายการ</th>` + selectedYears.map(y => `<th>${y}</th>`).join('');
+            let html = datasets.map(d => {
+                const isHeader = mainOutlabHeaders.some(h => d.label.startsWith(h));
+                const rowClass = isHeader ? 'font-bold bg-slate-50' : '';
+                return `<tr class="${rowClass}"><td class="label-cell">${d.label}</td>${d.data.map(v => `<td>${v.toLocaleString()}</td>`).join('')}</tr>`;
+            }).join('');
+            
+            if (showTotal && datasets.length > 0) {
+                let totals;
+                if (isOutlab) {
+                    const headersOnly = datasets.filter(d => mainOutlabHeaders.some(h => d.label.startsWith(h)));
+                    totals = datasets[0].data.map((_, i) => headersOnly.reduce((sum, d) => sum + d.data[i], 0));
+                } else {
+                    totals = datasets[0].data.map((_, i) => datasets.reduce((sum, d) => sum + d.data[i], 0));
+                }
+                html += `<tr class="font-bold bg-blue-50 text-blue-900"><td>ยอดรวมทั้งหมด (เฉพาะหัวข้อหลัก)</td>${totals.map(v => `<td>${v.toLocaleString()}</td>`).join('')}</tr>`;
+            }
+            document.getElementById(tbodyId).innerHTML = html;
+        }
+
+        function updatePie(fMain) {
+            const lastYear = selectedYears[selectedYears.length - 1];
+            const lastIdx = selectedYears.length - 1;
+            const total = fMain.reduce((sum, d) => sum + d.data[lastIdx], 0);
+            document.getElementById('pie-title').innerText = `สัดส่วนงานบริการ (ปีงบประมาณ ${lastYear})`;
+            document.getElementById('body-pie').innerHTML = fMain.map(d => {
+                const val = d.data[lastIdx];
+                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                return `<tr><td class="label-cell">${d.label}</td><td>${val.toLocaleString()}</td><td>${pct}%</td></tr>`;
+            }).join('');
+            if (charts.pie) charts.pie.destroy();
+            charts.pie = new Chart(document.getElementById('deptPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: fMain.map(d => d.label.split('(')[0]),
+                    datasets: [{ data: fMain.map(d => d.data[lastIdx]), backgroundColor: fMain.map(d => d.color) }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'right' }, 
+                        datalabels: { 
+                            color: '#fff', 
+                            font: { weight: 'bold' }, 
+                            formatter: (v) => total > 0 && v > (total * 0.05) ? ((v / total) * 100).toFixed(0) + '%' : '' 
+                        } 
+                    } 
+                }
+            });
+        }
+
+        function formatK(num) {
+            return num >= 1000 ? (num / 1000).toFixed(1) + 'k' : num.toLocaleString();
+        }
+
+        function updateCharts(fMain, fBlood, fSpecial, fDraw, fOutlab) {
+            const stackedBarOpts = {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { position: 'bottom' },
+                    datalabels: { 
+                        display: (ctx) => ctx.dataset.type !== 'line', 
+                        color: '#fff', font: { size: 10, weight: 'bold' },
+                        formatter: (val) => val > 0 ? formatK(val) : '', 
+                        align: 'center', anchor: 'center'
+                    },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: { x: { stacked: true }, y: { stacked: true, ticks: { callback: v => v >= 1000 ? (v/1000).toFixed(0)+'k' : v.toLocaleString() } } }
+            };
+
+            const normalBarOpts = {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { position: 'bottom' },
+                    datalabels: { anchor: 'end', align: 'top', formatter: v => v > 0 ? formatK(v) : '', font: { size: 10, weight: '600' }, color: '#475569' } 
+                },
+                scales: { y: { ticks: { callback: v => v >= 1000 ? (v/1000)+'k' : v.toLocaleString() } } }
+            };
+
+            // Main Trend Chart
+            if (charts.main) charts.main.destroy();
+            const mainTotals = fMain[0].data.map((_, i) => fMain.reduce((sum, d) => sum + d.data[i], 0));
+            charts.main = new Chart(document.getElementById('mainTrendChart'), {
+                type: 'bar',
+                data: { 
+                    labels: selectedYears, 
+                    datasets: [
+                        { label: 'ยอดรวมภาระงาน', data: mainTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } }, 
+                        ...fMain.map(d => ({ label: d.label.split('(')[0], data: d.data, backgroundColor: d.color, stack: 'combined' }))
+                    ] 
+                },
+                options: stackedBarOpts
+            });
+
+            // Outlab Chart (Updated to Stacked with Line)
+            if (charts.outlabChart) charts.outlabChart.destroy();
+            const outlabTotals = fOutlab[0].data.map((_, i) => fOutlab.reduce((sum, d) => sum + d.data[i], 0));
+            charts.outlabChart = new Chart(document.getElementById('outlabChart'), {
+                type: 'bar',
+                data: {
+                    labels: selectedYears,
+                    datasets: [
+                        { label: 'ยอดรวมส่งตรวจภายนอก', data: outlabTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } },
+                        ...fOutlab.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, stack: 'outlabStack' }))
+                    ]
+                },
+                options: stackedBarOpts
+            });
+
+            // Other Charts
+            const renderBar = (id, datasets) => {
+                if (charts[id]) charts[id].destroy();
+                charts[id] = new Chart(document.getElementById(id), { 
+                    type: 'bar', 
+                    data: { labels: selectedYears, datasets: datasets.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color })) }, 
+                    options: normalBarOpts 
+                });
+            };
+            
+            renderBar('bloodBankDetailChart', fBlood);
+            renderBar('specialLabTrendChart', fSpecial);
+            renderBar('bloodDrawingChart', fDraw);
+        }
+
+        function renderYearFilters() {
+            document.getElementById('year-filters').innerHTML = allYears.map(y => `
+                <div class="flex items-center">
+                    <input type="checkbox" id="chk-${y.year}" value="${y.year}" checked class="filter-checkbox hidden" onchange="toggleYear('${y.year}')">
+                    <label for="chk-${y.year}">${y.year}</label>
+                </div>
+            `).join('');
+        }
+
+        function toggleYear(year) {
+            if (selectedYears.includes(year)) {
+                if (selectedYears.length > 1) selectedYears = selectedYears.filter(y => y !== year);
+                else document.getElementById(`chk-${year}`).checked = true;
+            } else {
+                selectedYears.push(year);
+                selectedYears.sort();
+            }
+            updateAll();
+        }
+
+        function selectAllYears(status) {
+            selectedYears = status ? allYears.map(y => y.year) : allYears.slice(-3).map(y => y.year);
+            allYears.forEach(y => document.getElementById(`chk-${y.year}`).checked = selectedYears.includes(y.year));
+            updateAll();
+        }
+
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active-tab'));
+            document.getElementById('btn-' + id).classList.add('active-tab');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
