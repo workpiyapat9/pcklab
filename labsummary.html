@@ -90,7 +90,7 @@
                 <div class="data-table-container"><table><thead><tr id="thead-blood"></tr></thead><tbody id="body-blood"></tbody></table></div>
             </div>
             <div id="tab-special" class="tab-content">
-                <h2 class="text-xl font-bold mb-6 text-purple-800 text-center">แล็บพิเศษ และงานตรวจระบาดวิทยา</h2>
+                <h2 class="text-xl font-bold mb-6 text-purple-800 text-center">แล็บพิเศษ และงานตรวจระบาดวิทยา (รายหัวข้อย่อย)</h2>
                 <div class="chart-container"><canvas id="specialLabTrendChart"></canvas></div>
                 <div class="data-table-container"><table><thead><tr id="thead-special"></tr></thead><tbody id="body-special"></tbody></table></div>
             </div>
@@ -124,17 +124,16 @@
         let selectedYears = [];
         let charts = {};
 
-        // ปรับปรุง colorMap ให้ครอบคลุมป้ายกำกับทั้งหมด
         const colorMap = {
             '1.เคมีคลินิก': '#1e3a8a', '2.โลหิต': '#dc2626', '3.จุลทรรศน์': '#f59e0b',
             '4.ธนาคารเลือด': '#0ea5e9', '5.ภูมิคุ้มกัน': '#10b981', '6.จุลชีว': '#8b5cf6',
             '7.แลปพิเศษ': '#ec4899', 'รับบริจาคเลือด': '#ef4444', 'เตรียมเลือด': '#f87171',
             'เตรียมส่วนประกอบ': '#b91c1c', 'CD4': '#a855f7', 'RT- pcr': '#64748b', 'HPV DNA': '#10b981',
-            'RT-pcr': '#64748b', '8.เจาะเลือด (ราย)': '#f97316'
+            'RT-pcr': '#64748b', '8.เจาะเลือด (ราย)': '#f97316', 'GeneXpert': '#c026d3', 'AFB': '#db2777', 
+            'IHC': '#4d7c0f', 'Special': '#0f766e', 'Flow': '#312e81'
         };
 
         const fallbackColors = ['#2563eb', '#dc2626', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#d946ef'];
-
         const outlabColors = ['#4f46e5', '#7c3aed', '#db2777', '#2563eb', '#059669', '#d97706', '#9333ea'];
         const mainOutlabHeaders = ["9.1", "9.2", "9.3", "9.4", "9.5", "9.6", "9.7"];
 
@@ -216,8 +215,7 @@
                     return cleanVal === "" ? 0 : parseFloat(cleanVal);
                 });
 
-                // ค้นหาสีจาก colorMap หรือใช้ fallback
-                let color = '#94a3b8'; // Default grey
+                let color = '#94a3b8';
                 for (const key in colorMap) {
                     if (label.includes(key)) {
                         color = colorMap[key];
@@ -229,22 +227,33 @@
                 return {
                     label: label,
                     data: values,
-                    color: color
+                    color: color,
+                    rowIndex: index
                 };
             }).filter(item => item !== null);
         }
 
-        function getFiltered(source, keywords, isOutlab = false) {
+        function getFiltered(source, keywords, isOutlab = false, rowIndexRange = null, excludeHeader = false) {
             if (!isOutlab) {
-                return keywords.map(kw => {
-                    const item = source.find(d => d.label.includes(kw));
-                    if (!item) return null;
+                let items = [];
+                if (rowIndexRange) {
+                    items = source.filter(d => d.rowIndex >= rowIndexRange.start && d.rowIndex <= rowIndexRange.end);
+                } else {
+                    items = keywords.map(kw => source.find(d => d.label.includes(kw))).filter(d => d !== null);
+                }
+
+                // กรองหัวข้อหลักออกหากต้องการ (เช่น "7.แลปพิเศษ")
+                if (excludeHeader) {
+                    items = items.filter(d => !d.label.includes("7.แลปพิเศษ"));
+                }
+
+                return items.map(item => {
                     const filteredValues = [];
                     allYears.forEach((y, i) => {
                         if (selectedYears.includes(y.year)) filteredValues.push(item.data[i]);
                     });
                     return { ...item, data: filteredValues };
-                }).filter(d => d !== null);
+                });
             } else {
                 return source.map(item => {
                     const filteredValues = [];
@@ -259,12 +268,14 @@
         function updateAll() {
             const mainKeys = ['1.เคมีคลินิก', '2.โลหิต', '3.จุลทรรศน์', '4.ธนาคารเลือด', '5.ภูมิคุ้มกัน', '6.จุลชีว', '7.แลปพิเศษ'];
             const bloodKeys = ['รับบริจาคเลือด', 'เตรียมเลือด', 'เตรียมส่วนประกอบ'];
-            const specialKeys = ['CD4', 'RT- pcr', 'RT-pcr', 'HPV DNA'];
             const drawKeys = ['8.เจาะเลือด (ราย)'];
 
             const fMain = getFiltered(rawData, mainKeys);
             const fBlood = getFiltered(rawData, bloodKeys);
-            const fSpecial = getFiltered(rawData, specialKeys);
+            
+            // ดึงข้อมูลแถวที่ 15-21 (index ประมาณ 13-20) และกรองหัวข้อหลักออก
+            const fSpecial = getFiltered(rawData, [], false, { start: 13, end: 20 }, true); 
+
             const fDraw = getFiltered(rawData, drawKeys);
             const fOutlabAll = getFiltered(outlabData, [], true);
 
@@ -275,7 +286,7 @@
 
             renderTable('thead-trend', 'body-trend', fMain, true);
             renderTable('thead-blood', 'body-blood', fBlood);
-            renderTable('thead-special', 'body-special', fSpecial);
+            renderTable('thead-special', 'body-special', fSpecial, true); // แสดงยอดรวมของรายการย่อย
             renderTable('thead-draw', 'body-draw', fDraw);
             renderTable('thead-outlab', 'body-outlab', fOutlabAll, true, true); 
             
@@ -305,6 +316,7 @@
         }
 
         function updatePie(fMain) {
+            if (fMain.length === 0) return;
             const lastYear = selectedYears[selectedYears.length - 1];
             const lastIdx = selectedYears.length - 1;
             const total = fMain.reduce((sum, d) => sum + d.data[lastIdx], 0);
@@ -367,35 +379,38 @@
 
             // Main Trend Chart
             if (charts.main) charts.main.destroy();
-            const mainTotals = fMain[0].data.map((_, i) => fMain.reduce((sum, d) => sum + d.data[i], 0));
-            charts.main = new Chart(document.getElementById('mainTrendChart'), {
-                type: 'bar',
-                data: { 
-                    labels: selectedYears, 
-                    datasets: [
-                        { label: 'ยอดรวมภาระงาน', data: mainTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } }, 
-                        ...fMain.map(d => ({ label: d.label.split('(')[0], data: d.data, backgroundColor: d.color, stack: 'combined' }))
-                    ] 
-                },
-                options: stackedBarOpts
-            });
+            if (fMain.length > 0) {
+                const mainTotals = fMain[0].data.map((_, i) => fMain.reduce((sum, d) => sum + d.data[i], 0));
+                charts.main = new Chart(document.getElementById('mainTrendChart'), {
+                    type: 'bar',
+                    data: { 
+                        labels: selectedYears, 
+                        datasets: [
+                            { label: 'ยอดรวมภาระงาน', data: mainTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } }, 
+                            ...fMain.map(d => ({ label: d.label.split('(')[0], data: d.data, backgroundColor: d.color, stack: 'combined' }))
+                        ] 
+                    },
+                    options: stackedBarOpts
+                });
+            }
 
             // Outlab Chart
             if (charts.outlabChart) charts.outlabChart.destroy();
-            const outlabTotals = fOutlab.length > 0 ? fOutlab[0].data.map((_, i) => fOutlab.reduce((sum, d) => sum + d.data[i], 0)) : [];
-            charts.outlabChart = new Chart(document.getElementById('outlabChart'), {
-                type: 'bar',
-                data: {
-                    labels: selectedYears,
-                    datasets: [
-                        { label: 'ยอดรวมส่งตรวจภายนอก', data: outlabTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } },
-                        ...fOutlab.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, stack: 'outlabStack' }))
-                    ]
-                },
-                options: stackedBarOpts
-            });
+            if (fOutlab.length > 0) {
+                const outlabTotals = fOutlab[0].data.map((_, i) => fOutlab.reduce((sum, d) => sum + d.data[i], 0));
+                charts.outlabChart = new Chart(document.getElementById('outlabChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: selectedYears,
+                        datasets: [
+                            { label: 'ยอดรวมส่งตรวจภายนอก', data: outlabTotals, type: 'line', borderColor: '#D4AF37', backgroundColor: '#D4AF37', borderWidth: 4, pointBackgroundColor: '#fff', fill: false, stacked: false, datalabels: { display: true, align: 'top', anchor: 'end', formatter: v => formatK(v), color: '#B8860B', font: { weight: 'bold', size: 12 } } },
+                            ...fOutlab.map(d => ({ label: d.label, data: d.data, backgroundColor: d.color, stack: 'outlabStack' }))
+                        ]
+                    },
+                    options: stackedBarOpts
+                });
+            }
 
-            // Render Function for Normal Bar
             const renderBar = (id, datasets) => {
                 if (charts[id]) charts[id].destroy();
                 charts[id] = new Chart(document.getElementById(id), { 
