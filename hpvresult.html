@@ -29,6 +29,17 @@
         .link-icon {
             @apply inline-flex items-center justify-center ml-2 p-1.5 rounded-md bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-all duration-200;
         }
+
+        /* Separate Button Style */
+        .view-btn {
+            @apply px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer border shadow-sm flex items-center gap-2;
+        }
+        .view-btn.active {
+            @apply bg-pink-600 text-white border-pink-600 shadow-pink-200 ring-4 ring-pink-50;
+        }
+        .view-btn.inactive {
+            @apply bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:text-pink-600;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -98,25 +109,38 @@
                 <div class="h-80"><canvas id="typePieChart"></canvas></div>
             </div>
             <div class="card lg:col-span-2">
-                <h3 class="font-bold text-lg mb-6 text-slate-700">เปรียบเทียบผลตรวจแยกตามหน่วยงาน</h3>
+                <h3 class="font-bold text-lg mb-6 text-slate-700" id="chartTitle">เปรียบเทียบผลตรวจแยกตามหน่วยงาน</h3>
                 <div class="h-80"><canvas id="hospitalBarChart"></canvas></div>
             </div>
         </div>
 
         <!-- Data Table -->
         <div class="card overflow-hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <h3 class="font-bold text-lg text-slate-700">ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)</h3>
-                <div class="relative w-full md:w-64">
-                    <input type="text" id="tableSearch" placeholder="ค้นหาหน่วยงาน..." class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none transition-all pl-10">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-6">
+                <div class="flex flex-col gap-4">
+                    <h3 class="font-bold text-lg text-slate-700" id="tableTitle">ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)</h3>
+                    <!-- Separate Buttons View Switch -->
+                    <div class="flex flex-wrap gap-3">
+                        <button onclick="switchView('hospital')" id="btn-hospital" class="view-btn active">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                            รายหน่วยงาน
+                        </button>
+                        <button onclick="switchView('district')" id="btn-district" class="view-btn inactive">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            รายอำเภอ
+                        </button>
+                    </div>
+                </div>
+                <div class="relative w-full md:w-64 self-end md:self-center">
+                    <input type="text" id="tableSearch" placeholder="ค้นหาข้อมูล..." class="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none transition-all pl-10 shadow-sm">
                     <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
             </div>
-            <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
                 <table class="min-w-full divide-y divide-slate-200" id="mainTable">
                     <thead class="bg-slate-50 text-[11px] font-bold text-slate-600">
                         <tr>
-                            <th class="px-6 py-4 text-left border-r sticky left-0 bg-slate-100" rowspan="2">หน่วยงาน</th>
+                            <th class="px-6 py-4 text-left border-r sticky left-0 bg-slate-100 z-30" rowspan="2" id="th-name">หน่วยงาน</th>
                             <th class="px-4 py-2 text-center border-r border-b bg-pink-100/40" colspan="4">Self-test</th>
                             <th class="px-4 py-2 text-center border-r border-b bg-indigo-100/40" colspan="4">Clinician</th>
                             <th class="px-4 py-4 text-center border-r bg-slate-100/50" rowspan="2">LBC</th>
@@ -144,10 +168,14 @@
 
     <script>
         const SPREADSHEET_ID = '1474eE5jGXvnw7QrhOhQwt96VJGLJpTG2vTPu4OVbHxM';
-        const GID = '1541013318';
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${GID}`;
+        
+        // GID Settings
+        const GID_HOSPITAL = '1541013318';
+        const GID_DISTRICT = '199543958';
 
-        // จัดการลิงก์หน่วยงานที่นี่
+        let currentView = 'hospital'; 
+
+        // Hospital Links
         const hospitalLinks = {
             "รพ.หนองหญ้าปล้อง": "https://drive.google.com/drive/folders/1gWWliXgVGtzGYhvcmCoJYLyHonkufGZp?usp=drive_link",
             "รพ.เขาย้อย": "https://drive.google.com/drive/folders/1oSuIKWRFVmJQk9xxKTKXnGGk4ELpJRlR?usp=drive_link",
@@ -161,12 +189,37 @@
             "รพ.บ้านแหลม": "https://drive.google.com/drive/folders/1J5wR7L4s_PHkQqGZOjAjGZO5ZY9cHd9G?usp=drive_link",
             "รพ.สต.บ้านฝั่งท่า": "https://drive.google.com/drive/folders/1gVecH1NWujqc22nifl8TPJU1sQPaiDEI?usp=drive_link",
             "รพ.สต.บ้านซ่อง": "https://drive.google.com/drive/folders/1PgCZJBIPLAgqg8Cajc6EoisNJQKCXtf0?usp=drive_link",
-            // เพิ่มลิงก์หน่วยงานอื่นๆ ได้ตามรูปแบบด้านบน
         };
 
         let chartInstances = {};
 
+        // View Switch Logic
+        function switchView(view) {
+            if (currentView === view) return;
+            currentView = view;
+            
+            // Update Buttons
+            document.getElementById('btn-hospital').className = `view-btn ${view === 'hospital' ? 'active' : 'inactive'}`;
+            document.getElementById('btn-district').className = `view-btn ${view === 'district' ? 'active' : 'inactive'}`;
+            
+            // Update Labels
+            const title = view === 'hospital' ? 'ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)' : 'ข้อมูลรายอำเภอ (เรียงจากยอดตรวจสูงสุด)';
+            const thName = view === 'hospital' ? 'หน่วยงาน' : 'อำเภอ';
+            const chartTitle = view === 'hospital' ? 'เปรียบเทียบผลตรวจแยกตามหน่วยงาน' : 'เปรียบเทียบผลตรวจแยกตามอำเภอ';
+            
+            document.getElementById('tableTitle').innerText = title;
+            document.getElementById('th-name').innerText = thName;
+            document.getElementById('chartTitle').innerText = chartTitle;
+            
+            fetchData();
+        }
+
         async function fetchData() {
+            const gid = currentView === 'hospital' ? GID_HOSPITAL : GID_DISTRICT;
+            const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
+            
+            document.getElementById('loading-overlay').classList.remove('hidden');
+
             try {
                 const response = await fetch(CSV_URL);
                 const data = await response.text();
@@ -178,6 +231,7 @@
                 document.getElementById('loading-overlay').classList.add('hidden');
             } catch (error) {
                 console.error('Error:', error);
+                document.getElementById('loading-overlay').classList.add('hidden');
             }
         }
 
@@ -249,9 +303,8 @@
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
 
-                // จัดการส่วนชื่อหน่วยงานและลิงก์
                 const link = hospitalLinks[h.name];
-                const linkHtml = link ? 
+                const linkHtml = (currentView === 'hospital' && link) ? 
                     `<a href="${link}" target="_blank" class="link-icon" title="เปิด Google Drive ของ ${h.name}">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
@@ -280,7 +333,7 @@
             const tableFoot = document.getElementById('data-table-foot');
             tableFoot.innerHTML = `
                 <tr class="bg-slate-100">
-                    <td class="px-6 py-4 border-r sticky left-0 bg-slate-100">รวมทั้งหมด</td>
+                    <td class="px-6 py-4 border-r sticky left-0 bg-slate-100 z-10">รวมทั้งหมด</td>
                     <td class="text-right px-4 border-r">${totals.s16.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.s18.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.sOther.toLocaleString()}</td>
@@ -339,7 +392,6 @@
             });
 
             if (chartInstances.bar) chartInstances.bar.destroy();
-            
             const chartData = s.hospitals.slice(0, 15); 
 
             chartInstances.bar = new Chart(document.getElementById('hospitalBarChart'), {
