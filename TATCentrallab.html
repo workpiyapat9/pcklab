@@ -3,98 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAT Dashboard - Weighted Average & Category Split</title>
+    <title>TAT Dashboard - Weighted Average & KPI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
         body { font-family: 'Sarabun', sans-serif; background-color: #f1f5f9; }
         
-        .filter-chip {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+        .filter-chip { cursor: pointer; transition: all 0.2s ease; }
         .filter-chip input:checked + span {
             background-color: #6366f1;
             color: white;
             border-color: #6366f1;
         }
 
-        select {
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 1em;
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 50;
         }
+        .dropdown-content.show { display: block; }
 
-        .tab-btn.active {
-            border-bottom: 3px solid #6366f1;
-            color: #6366f1;
-        }
+        .tab-btn.active { border-bottom: 3px solid #6366f1; color: #6366f1; }
+        .dist-tab.active { background-color: #6366f1; color: white; border-color: #6366f1; }
         
-        #category-tat-list::-webkit-scrollbar {
-            width: 4px;
-        }
-        #category-tat-list::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        #category-tat-list::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 10px;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 22px;
-        }
+        .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #cbd5e1;
-            transition: .4s;
-            border-radius: 34px;
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1; transition: .4s; border-radius: 34px;
         }
         .slider:before {
-            position: absolute;
-            content: "";
-            height: 16px; width: 16px;
-            left: 3px; bottom: 3px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
+            position: absolute; content: ""; height: 16px; width: 16px;
+            left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%;
         }
         input:checked + .slider { background-color: #f43f5e; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* Crown animation for top 1 */
-        @keyframes bounce-slow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+        .bar-transition { transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* Menu Button Hover effect */
+        .menu-btn:hover {
+            transform: scale(1.05);
+            background-color: #eef2ff;
         }
-        .animate-crown { animation: bounce-slow 2s infinite ease-in-out; }
     </style>
 </head>
-<body class="p-4 md:p-6">
+<body class="p-4 md:p-6 text-slate-800">
     <div class="max-w-7xl mx-auto">
         <!-- Header -->
-        <header class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-extrabold text-slate-900">TAT Central lab</h1>
-                <p class="text-slate-500 text-sm">สรุปผล TAT ตามแต่ละช่วงเวลาและ Priority</p>
+        <header class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center relative overflow-hidden">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <!-- Hamburger Menu Button Linking to index.html -->
+                <a href="index.html" class="menu-btn w-12 h-12 flex items-center justify-center rounded-2xl border border-slate-100 bg-slate-50 text-slate-600 transition-all shadow-sm">
+                    <i class="fas fa-bars text-xl"></i>
+                </a>
+                
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-900 leading-tight">TAT Central lab</h1>
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider">ระยะเวลารอคอยผลของ Central lab </p>
+                </div>
             </div>
-            <div id="status-badge" class="mt-4 md:mt-0 px-4 py-2 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold flex items-center shadow-sm">
+            
+            <div id="status-badge" class="mt-4 md:mt-0 px-4 py-2 rounded-xl bg-amber-50 text-amber-600 text-sm font-bold flex items-center shadow-sm">
                 <i class="fas fa-spinner fa-spin mr-2"></i> กำลังโหลดข้อมูล...
             </div>
         </header>
 
         <!-- Filters Section -->
         <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-6 space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="flex justify-between items-center border-b border-slate-50 pb-4">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-filter text-indigo-500 text-sm"></i>
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider">ตัวกรองข้อมูล</h2>
+                    <span class="text-[10px] bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded-full font-bold">Auto-Update</span>
+                </div>
+                <button onclick="resetFilters()" class="text-xs font-bold text-slate-400 hover:text-rose-500 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-rose-50">
+                    <i class="fas fa-undo-alt text-[10px]"></i> ล้างค่าตัวกรอง
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Group 1: Time Periods -->
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">ปี</label>
@@ -105,6 +106,8 @@
                         <div id="month-filter-container" class="flex flex-wrap gap-2"></div>
                     </div>
                 </div>
+                
+                <!-- Group 2: Day Types -->
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">ประเภทวัน</label>
@@ -115,164 +118,193 @@
                         <div id="day-filter-container" class="flex flex-wrap gap-2"></div>
                     </div>
                 </div>
+
+                <!-- Group 3: Ward Type Classification -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">ประเภทหอผู้ป่วย (OPD/IPD)</label>
+                        <div id="ward-type-container" class="flex flex-wrap gap-2">
+                            <label class="filter-chip">
+                                <input type="checkbox" data-group="wardClass" value="OPD" class="hidden" onchange="onWardClassChange()" checked>
+                                <span class="px-4 py-2 rounded-full border border-slate-200 text-slate-500 font-bold text-xs hover:border-indigo-400 transition-all block text-center">OPD</span>
+                            </label>
+                            <label class="filter-chip">
+                                <input type="checkbox" data-group="wardClass" value="IPD" class="hidden" onchange="onWardClassChange()" checked>
+                                <span class="px-4 py-2 rounded-full border border-slate-200 text-slate-500 font-bold text-xs hover:border-indigo-400 transition-all block text-center">IPD</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <hr class="border-slate-100">
 
-            <div class="flex flex-col md:flex-row items-end gap-4">
+            <div class="flex flex-col md:flex-row items-end gap-6">
+                <!-- Time Range Selection -->
                 <div class="flex-1 w-full">
                     <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">
                         <i class="fas fa-clock mr-2 text-sky-500"></i> ช่วงเวลา (Time Range)
                     </label>
                     <div class="flex gap-2">
-                        <select id="start-time" onchange="applyFilters()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all">
-                        </select>
-                        <select id="end-time" onchange="applyFilters()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all">
-                        </select>
+                        <select id="start-time" onchange="applyFilters()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-[position:right_0.75rem_center] bg-[length:1em]"></select>
+                        <select id="end-time" onchange="applyFilters()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:ring-2 focus:ring-sky-500 focus:outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e')] bg-no-repeat bg-[position:right_0.75rem_center] bg-[length:1em]"></select>
                     </div>
                 </div>
-                <div class="flex-1 w-full">
-                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">กรองตาม Ward</label>
-                    <select id="ward-filter" onchange="applyFilters()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                        <option value="ALL">ทุก Ward</option>
-                    </select>
+
+                <!-- Searchable Dropdown for Ward -->
+                <div class="flex-1 w-full relative">
+                    <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">เลือกหอผู้ป่วยเจาะจง (Ward)</label>
+                    <div class="relative">
+                        <div id="ward-dropdown-btn" onclick="toggleWardDropdown()" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold cursor-pointer flex justify-between items-center hover:border-indigo-300 transition-all">
+                            <span id="selected-ward-label">ทุก Ward</span>
+                            <i class="fas fa-chevron-down text-slate-400 text-xs"></i>
+                        </div>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="ward-dropdown-content" class="dropdown-content mt-1 custom-scrollbar">
+                            <div class="sticky top-0 p-2 bg-white border-b border-slate-100">
+                                <div class="relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                    <input type="text" id="ward-search-input" placeholder="ค้นหาชื่อ Ward..." 
+                                        oninput="filterWardOptions()"
+                                        class="w-full pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                </div>
+                            </div>
+                            <div id="ward-options-list" class="py-1">
+                                <!-- Options will be generated here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <button onclick="resetFilters()" class="w-full md:w-auto px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all flex items-center justify-center shadow-md active:scale-95">
-                    <i class="fas fa-undo mr-2"></i> ล้างค่า
-                </button>
             </div>
         </div>
 
         <!-- Upper Section -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            
-            <!-- Avg TAT by Category -->
             <div class="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col">
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                    <div>
-                        <h3 class="text-lg font-extrabold text-slate-800">Avg TAT by Category</h3>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">วิเคราะห์ระยะเวลาเฉลี่ยตามประเภทการตรวจ</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pb-6 border-b border-slate-100">
+                    <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 text-center">
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Overall Avg TAT</p>
+                        <h2 id="avg-tat-total" class="text-3xl font-black text-indigo-600 leading-none">-</h2>
+                        <p class="text-[10px] text-indigo-300 font-bold mt-1 uppercase">Minutes</p>
                     </div>
-                    <div class="flex items-center gap-3 bg-rose-50 px-3 py-2 rounded-2xl border border-rose-100">
-                        <div class="text-right">
+                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Req.</p>
+                        <h2 id="total-cases" class="text-3xl font-black text-slate-800 leading-none">-</h2>
+                        <p class="text-[10px] text-slate-300 font-bold mt-1 uppercase">Specimens</p>
+                    </div>
+                    <div class="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex flex-col justify-center">
+                        <div class="flex justify-between items-center mb-1">
                             <p class="text-[10px] font-black text-rose-500 uppercase leading-none">Rule out > 3Hrs.</p>
-                            <p class="text-[8px] font-bold text-rose-300 uppercase mt-0.5">เนื่องจากบางTestเปิดเฉพาะในเวลาหรือบางวัน</p>
+                            <label class="switch scale-75">
+                                <input type="checkbox" id="rule-out-tat" onchange="applyFilters()" checked>
+                                <span class="slider"></span>
+                            </label>
                         </div>
-                        <label class="switch">
-                            <input type="checkbox" id="rule-out-tat" onchange="applyFilters()" checked>
-                            <span class="slider"></span>
-                        </label>
+                        <p class="text-[8px] font-bold text-rose-300 uppercase leading-tight text-center">กรองTestที่อาจไม่ตรวจนอกเวลาหรือตรวจบางวัน</p>
                     </div>
                 </div>
-                <div id="category-tat-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-2">
+
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-lg font-extrabold text-slate-800">Avg TAT by Category</h3>
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">ระยะเวลาเฉลี่ยตามประเภทการตรวจ</p>
+                    </div>
+                </div>
+                
+                <div id="category-tat-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar">
                     <div class="animate-pulse bg-slate-50 h-20 rounded-2xl col-span-full"></div>
                 </div>
             </div>
 
-            <!-- Main Metrics -->
+            <!-- Distribution Panel -->
             <div class="lg:col-span-1 space-y-6">
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-                    <div class="flex justify-between items-start mb-4">
-                        <div>
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Overall Avg TAT</p>
-                            <h2 id="avg-tat-total" class="text-4xl font-black text-indigo-600">-</h2>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total Req.</p>
-                            <h2 id="total-cases" class="text-2xl font-black text-slate-800">-</h2>
-                        </div>
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i class="fas fa-chart-bar"></i></div>
+                        <h3 class="text-lg font-extrabold text-slate-800">TAT Distribution</h3>
                     </div>
-                    
-                    <div class="relative w-full h-6 bg-slate-100 rounded-xl overflow-hidden flex shadow-inner mb-6 text-white font-bold text-[10px]">
-                        <div id="stat-bar" class="h-full bg-rose-500 transition-all duration-500 flex items-center justify-center"></div>
-                        <div id="normal-bar" class="h-full bg-sky-500 transition-all duration-500 flex items-center justify-center"></div>
+                    <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start mb-6">
+                        <button onclick="updateDistTab('ALL')" id="dist-tab-all" class="dist-tab active px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase">ALL</button>
+                        <button onclick="updateDistTab('STAT')" id="dist-tab-stat" class="dist-tab px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase">STAT</button>
+                        <button onclick="updateDistTab('NORMAL')" id="dist-tab-normal" class="dist-tab px-4 py-1.5 text-[10px] font-black rounded-lg transition-all uppercase">Normal</button>
                     </div>
-
+                    <div id="tat-range-chart" class="space-y-4"></div>
+                </div>
+                
+                <!-- Priority Stats -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
                     <div class="space-y-3">
                         <div class="bg-rose-50/50 p-4 rounded-2xl border border-rose-100 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-rose-500 flex items-center justify-center text-white shadow-md shadow-rose-100">
-                                    <i class="fas fa-bolt text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] font-bold text-rose-400 uppercase">STAT Count</p>
-                                    <p id="priority-stat" class="text-xl font-black text-rose-600 leading-none">-</p>
-                                </div>
+                                <div class="w-10 h-10 rounded-lg bg-rose-500 flex items-center justify-center text-white shadow-md"><i class="fas fa-bolt text-xs"></i></div>
+                                <div><p class="text-[10px] font-bold text-rose-400 uppercase">STAT</p><p id="priority-stat" class="text-xl font-black text-rose-600 leading-none">-</p></div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-[10px] font-bold text-rose-400 uppercase">Daily</p>
-                                <p id="avg-stat-day" class="text-lg font-black text-rose-600 leading-none">-</p>
-                            </div>
+                            <div class="text-right"><p class="text-[10px] font-bold text-rose-400 uppercase">Avg/Day</p><p id="avg-stat-day" class="text-lg font-black text-rose-600 leading-none">-</p></div>
                         </div>
-
                         <div class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 flex items-center justify-between">
                             <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-lg bg-sky-500 flex items-center justify-center text-white shadow-md shadow-sky-100">
-                                    <i class="fas fa-check text-xs"></i>
-                                </div>
-                                <div>
-                                    <p class="text-[10px] font-bold text-sky-400 uppercase">Normal Count</p>
-                                    <p id="priority-normal" class="text-xl font-black text-sky-600 leading-none">-</p>
-                                </div>
+                                <div class="w-10 h-10 rounded-lg bg-sky-500 flex items-center justify-center text-white shadow-md"><i class="fas fa-check text-xs"></i></div>
+                                <div><p class="text-[10px] font-bold text-sky-400 uppercase">Normal</p><p id="priority-normal" class="text-xl font-black text-sky-600 leading-none">-</p></div>
                             </div>
-                            <div class="text-right">
-                                <p class="text-[10px] font-bold text-sky-400 uppercase">Daily</p>
-                                <p id="avg-normal-day" class="text-lg font-black text-sky-600 leading-none">-</p>
-                            </div>
+                            <div class="text-right"><p class="text-[10px] font-bold text-sky-400 uppercase">Avg/Day</p><p id="avg-normal-day" class="text-lg font-black text-sky-600 leading-none">-</p></div>
                         </div>
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-slate-50 text-center">
-                        <p class="text-[10px] font-bold text-indigo-400 uppercase">Daily Overall Avg: <span id="avg-per-day" class="text-indigo-600">-</span></p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Lower Section: Top 10 Wards Analysis (Full Width) -->
+        <!-- Middle Section: Top 10 Wards -->
         <div class="grid grid-cols-1 gap-6 mb-6">
             <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
-                <!-- Decorative background icon -->
-                <i class="fas fa-trophy absolute -right-10 -bottom-10 text-[180px] text-slate-50 opacity-50 pointer-events-none"></i>
-                
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6 relative z-10">
                     <div>
                         <div class="flex items-center gap-3">
-                            <div class="p-2 bg-amber-100 text-amber-600 rounded-lg">
-                                <i class="fas fa-ranking-star"></i>
-                            </div>
+                            <div class="p-2 bg-amber-100 text-amber-600 rounded-lg"><i class="fas fa-ranking-star"></i></div>
                             <h3 class="text-2xl font-extrabold text-slate-800">Top 10 Wards by Volume</h3>
                         </div>
-                        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2 ml-11">อันดับหอผู้ป่วยที่มีการส่งตรวจมากที่สุด</p>
                     </div>
                     <div class="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner border border-slate-200">
                         <button onclick="switchWardTab('STAT')" id="tab-stat" class="tab-btn active px-8 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider">STAT</button>
                         <button onclick="switchWardTab('NORMAL')" id="tab-normal" class="tab-btn px-8 py-2.5 text-xs font-black rounded-xl transition-all uppercase tracking-wider">NORMAL</button>
                     </div>
                 </div>
-                
-                <div id="top-wards-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-16 gap-y-8 relative z-10 px-2">
-                    <!-- Dynamic Content -->
-                </div>
+                <div id="top-wards-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-x-16 gap-y-8 relative z-10 px-2"></div>
             </div>
-        </div>
-        
-        <div class="text-center py-4">
-            <span id="row-count" class="text-xs font-bold text-slate-400 uppercase tracking-widest"></span>
         </div>
     </div>
 
     <script>
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR5eyaLzbz74eenP3-zBjKJfuS0RE2JEK4WlfiTYFagsFtV7fJ4s1YxIxfXv4XSF8OIk3DhU8Uh9vgc/pub?output=csv';
+        const MAIN_DATA_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR5eyaLzbz74eenP3-zBjKJfuS0RE2JEK4WlfiTYFagsFtV7fJ4s1YxIxfXv4XSF8OIk3DhU8Uh9vgc/pub?output=csv';
+        
         let allData = [];
         let filteredData = [];
         let uniqueTimeRanges = [];
+        let uniqueWardsWithClass = []; 
+        let currentSelectedWard = 'ALL';
         let currentWardTab = 'STAT';
+        let currentDistPriority = 'ALL';
         const WORKING_DAYS = 21; 
 
-        function getRangeSortValue(rangeStr) {
-            if (!rangeStr) return 0;
-            const firstPart = rangeStr.split('-')[0];
-            return parseFloat(firstPart.replace(':', '.')) || 0;
+        window.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('ward-dropdown-content');
+            const btn = document.getElementById('ward-dropdown-btn');
+            if (!btn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+
+        function toggleWardDropdown() {
+            document.getElementById('ward-dropdown-content').classList.toggle('show');
+            if(document.getElementById('ward-dropdown-content').classList.contains('show')) {
+                document.getElementById('ward-search-input').focus();
+            }
+        }
+
+        function updateStatusBadge(type, message) {
+            const badge = document.getElementById('status-badge');
+            badge.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle text-emerald-500' : type === 'error' ? 'fa-exclamation-triangle text-rose-500' : 'fa-spinner fa-spin'} mr-2"></i> ${message}`;
+            badge.className = `mt-4 md:mt-0 px-4 py-2 rounded-xl text-sm font-bold flex items-center shadow-sm ${type === 'success' ? 'bg-emerald-50 text-emerald-700' : type === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-600'}`;
         }
 
         function splitCSV(row) {
@@ -293,84 +325,140 @@
             return result;
         }
 
-        async function init() {
-            await fetchData();
+        function classifyWard(wardName) {
+            if (!wardName) return 'OPD';
+            const name = wardName.trim();
+            if (
+                name.includes('ห้องคลอด') || 
+                name.includes('ห้องวิสัญญี') || 
+                name.startsWith('ศัลยกรรม') || 
+                name.startsWith('หอ')
+            ) {
+                return 'IPD';
+            }
+            return 'OPD';
         }
 
         async function fetchData() {
             try {
-                const response = await fetch(SHEET_URL);
-                const text = await response.text();
-                const rawLines = text.split(/\r?\n/);
-                
-                const timeRangeSet = new Set();
-                const yearSet = new Set();
-                const monthSet = new Set();
-                const typeSet = new Set();
-                const daySet = new Set();
-                const wardSet = new Set();
+                updateStatusBadge('loading', 'กำลังโหลดข้อมูล...');
+                const mainRes = await fetch(MAIN_DATA_URL);
+                const mainText = await mainRes.text();
 
+                const rawLines = mainText.split(/\r?\n/);
+                const timeRangeSet = new Set(), yearSet = new Set(), monthSet = new Set(), typeSet = new Set(), daySet = new Set(), wardMap = new Map();
                 allData = [];
 
                 for (let i = 1; i < rawLines.length; i++) {
                     if (!rawLines[i].trim()) continue;
-                    
                     const row = splitCSV(rawLines[i]);
-                    if (row.length < 10) continue;
-
-                    const month = row[0].trim();
-                    const year = row[1].trim();
-                    const day = row[2].trim();
-                    const type = row[3].trim();
-                    const timeRange = row[4].trim();
-                    const ward = row[5].trim();
-                    const priority = row[6].trim();
-                    const category = row[7].trim() || 'Other';
-                    const tatVal = parseFloat(row[8]) || 0;
+                    const [month, year, day, type, timeRange, ward, priority, category, tat, count] = row.map(s => s.trim());
+                    const tatVal = parseFloat(tat) || 0;
+                    const countVal = parseInt(count.replace(/[^0-9]/g, '')) || 0;
                     
-                    const rawCount = row[9].replace(/[^0-9]/g, '');
-                    const countVal = parseInt(rawCount) || 0;
-
                     if (month) monthSet.add(month);
                     if (year) yearSet.add(year);
                     if (day) daySet.add(day);
                     if (type) typeSet.add(type);
                     if (timeRange) timeRangeSet.add(timeRange);
-                    if (ward) wardSet.add(ward);
-
-                    allData.push({
-                        month, year, day, type, timeRange, ward, priority, category,
-                        tat: tatVal,
-                        reqCount: countVal
+                    
+                    if (ward) {
+                        const wClass = classifyWard(ward);
+                        wardMap.set(ward, wClass);
+                    }
+                    
+                    allData.push({ 
+                        month, 
+                        year, 
+                        day, 
+                        type, 
+                        timeRange, 
+                        ward, 
+                        wardClass: classifyWard(ward),
+                        priority, 
+                        category: category || 'Other', 
+                        tat: tatVal, 
+                        reqCount: countVal 
                     });
                 }
 
-                uniqueTimeRanges = Array.from(timeRangeSet).sort((a, b) => getRangeSortValue(a) - getRangeSortValue(b));
+                uniqueTimeRanges = Array.from(timeRangeSet).sort((a, b) => {
+                    const getV = (s) => parseFloat(s.split('-')[0].replace(':', '.')) || 0;
+                    return getV(a) - getV(b);
+                });
                 
+                uniqueWardsWithClass = Array.from(wardMap.entries())
+                    .map(([name, wClass]) => ({ name, wClass }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+
                 generateChips('year-filter-container', Array.from(yearSet).sort(), 'year', true);
-                
                 const sortedMonths = Array.from(monthSet);
-                const lastMonth = sortedMonths[sortedMonths.length - 1];
-                generateChips('month-filter-container', sortedMonths, 'month', false, [lastMonth]);
-                
+                generateChips('month-filter-container', sortedMonths, 'month', false, [sortedMonths[sortedMonths.length - 1]]);
                 generateChips('type-filter-container', Array.from(typeSet), 'type', false, ['Normal']);
-                
                 generateChips('day-filter-container', Array.from(daySet), 'day', true);
                 
-                const wardSelect = document.getElementById('ward-filter');
-                wardSelect.innerHTML = '<option value="ALL">ทุก Ward</option>';
-                Array.from(wardSet).sort().forEach(w => wardSelect.add(new Option(w, w)));
-
+                renderWardOptions();
                 populateTimeDropdowns();
                 applyFilters();
-                
-                const badge = document.getElementById('status-badge');
-                badge.innerHTML = '<i class="fas fa-check-circle mr-2 text-emerald-500"></i> Data Loaded';
-                badge.className = "mt-4 md:mt-0 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-700 text-sm font-bold flex items-center shadow-sm";
+                updateStatusBadge('success', 'เชื่อมต่อข้อมูลเรียบร้อย');
             } catch (error) {
                 console.error(error);
-                document.getElementById('status-badge').innerText = 'Connection Error';
+                updateStatusBadge('error', 'ไม่สามารถโหลดข้อมูลได้');
             }
+        }
+
+        function onWardClassChange() {
+            renderWardOptions(document.getElementById('ward-search-input').value);
+            const activeClasses = getCheckedValues('wardClass');
+            if (currentSelectedWard !== 'ALL') {
+                const wardObj = uniqueWardsWithClass.find(w => w.name === currentSelectedWard);
+                if (wardObj && !activeClasses.includes(wardObj.wClass)) {
+                    currentSelectedWard = 'ALL';
+                    document.getElementById('selected-ward-label').innerText = 'ทุก Ward';
+                }
+            }
+            applyFilters();
+        }
+
+        function renderWardOptions(filterText = '') {
+            const list = document.getElementById('ward-options-list');
+            list.innerHTML = '';
+            
+            const activeClasses = getCheckedValues('wardClass');
+            const allOption = document.createElement('div');
+            allOption.className = `px-4 py-2 cursor-pointer hover:bg-slate-50 text-sm font-bold ${currentSelectedWard === 'ALL' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-700'}`;
+            allOption.innerText = 'ทุก Ward';
+            allOption.onclick = () => selectWard('ALL');
+            list.appendChild(allOption);
+
+            const filtered = uniqueWardsWithClass.filter(w => 
+                w.name.toLowerCase().includes(filterText.toLowerCase()) &&
+                activeClasses.includes(w.wClass)
+            );
+
+            filtered.forEach(wardObj => {
+                const opt = document.createElement('div');
+                opt.className = `px-4 py-2 cursor-pointer hover:bg-slate-50 text-sm flex justify-between items-center ${currentSelectedWard === wardObj.name ? 'text-indigo-600 bg-indigo-50 font-bold' : 'text-slate-600'}`;
+                opt.innerHTML = `<span>${wardObj.name}</span> <span class="text-[9px] px-1.5 py-0.5 rounded ${wardObj.wClass === 'IPD' ? 'bg-rose-50 text-rose-500' : 'bg-sky-50 text-sky-500'}">${wardObj.wClass}</span>`;
+                opt.onclick = () => selectWard(wardObj.name);
+                list.appendChild(opt);
+            });
+
+            if (filtered.length === 0 && (filterText !== '' || activeClasses.length < 2)) {
+                list.innerHTML += `<div class="px-4 py-4 text-center text-slate-400 text-xs italic">ไม่มีรายชื่อหอผู้ป่วยตามเงื่อนไขที่เลือก</div>`;
+            }
+        }
+
+        function filterWardOptions() {
+            const val = document.getElementById('ward-search-input').value;
+            renderWardOptions(val);
+        }
+
+        function selectWard(ward) {
+            currentSelectedWard = ward;
+            document.getElementById('selected-ward-label').innerText = ward === 'ALL' ? 'ทุก Ward' : ward;
+            document.getElementById('ward-dropdown-content').classList.remove('show');
+            applyFilters();
         }
 
         function generateChips(containerId, items, name, allChecked = true, defaultSelected = []) {
@@ -380,237 +468,132 @@
                 const isChecked = allChecked || defaultSelected.includes(item);
                 const label = document.createElement('label');
                 label.className = 'filter-chip';
-                label.innerHTML = `
-                    <input type="checkbox" data-group="${name}" value="${item}" class="hidden" onchange="applyFilters()" ${isChecked ? 'checked' : ''}>
-                    <span class="px-4 py-2 rounded-full border border-slate-200 text-slate-500 font-bold text-xs hover:border-indigo-400 transition-all block text-center">
-                        ${item}
-                    </span>
-                `;
+                const onChgStr = (name === 'wardClass') ? 'onWardClassChange()' : 'applyFilters()';
+                label.innerHTML = `<input type="checkbox" data-group="${name}" value="${item}" class="hidden" onchange="${onChgStr}" ${isChecked ? 'checked' : ''}><span class="px-4 py-2 rounded-full border border-slate-200 text-slate-500 font-bold text-xs hover:border-indigo-400 transition-all block text-center">${item}</span>`;
                 container.appendChild(label);
             });
         }
 
         function populateTimeDropdowns() {
-            const startSelect = document.getElementById('start-time');
-            const endSelect = document.getElementById('end-time');
-            startSelect.innerHTML = ''; endSelect.innerHTML = '';
+            const startSelect = document.getElementById('start-time'), endSelect = document.getElementById('end-time');
             uniqueTimeRanges.forEach((range, index) => {
-                const parts = range.split('-');
-                startSelect.add(new Option(parts[0] || range, index));
-                endSelect.add(new Option(parts[1] || range, index));
+                startSelect.add(new Option(range.split('-')[0], index));
+                endSelect.add(new Option(range.split('-')[1] || range, index));
             });
-            startSelect.value = 0;
-            endSelect.value = uniqueTimeRanges.length - 1;
-        }
-
-        function resetFilters() {
-            document.getElementById('rule-out-tat').checked = true; 
-            
-            const yearCheckboxes = document.querySelectorAll('input[data-group="year"]');
-            yearCheckboxes.forEach(cb => cb.checked = true);
-            
-            const monthCheckboxes = document.querySelectorAll('input[data-group="month"]');
-            const lastMonthVal = monthCheckboxes[monthCheckboxes.length - 1]?.value;
-            monthCheckboxes.forEach(cb => cb.checked = (cb.value === lastMonthVal));
-
-            const typeCheckboxes = document.querySelectorAll('input[data-group="type"]');
-            typeCheckboxes.forEach(cb => cb.checked = (cb.value === 'Normal'));
-
-            const dayCheckboxes = document.querySelectorAll('input[data-group="day"]');
-            dayCheckboxes.forEach(cb => cb.checked = true);
-
-            document.getElementById('start-time').value = 0;
-            document.getElementById('end-time').value = uniqueTimeRanges.length - 1;
-            document.getElementById('ward-filter').value = 'ALL';
-            
-            applyFilters();
-        }
-
-        function getCheckedValues(group) {
-            return Array.from(document.querySelectorAll(`input[data-group="${group}"]:checked`)).map(cb => cb.value);
+            startSelect.value = 0; endSelect.value = uniqueTimeRanges.length - 1;
         }
 
         function applyFilters() {
-            if (!allData.length) return;
-            const years = getCheckedValues('year');
-            const months = getCheckedValues('month');
-            const types = getCheckedValues('type');
-            const days = getCheckedValues('day');
-            const selectedWard = document.getElementById('ward-filter').value;
-            const isRuleOut = document.getElementById('rule-out-tat').checked;
-            
-            const startIndex = parseInt(document.getElementById('start-time').value);
-            const endIndex = parseInt(document.getElementById('end-time').value);
-            const minIdx = Math.min(startIndex, endIndex);
-            const maxIdx = Math.max(startIndex, endIndex);
-            const allowedRanges = uniqueTimeRanges.slice(minIdx, maxIdx + 1);
+            const years = getCheckedValues('year'), 
+                  months = getCheckedValues('month'), 
+                  types = getCheckedValues('type'), 
+                  days = getCheckedValues('day'), 
+                  wardClasses = getCheckedValues('wardClass'),
+                  isRuleOut = document.getElementById('rule-out-tat').checked;
+
+            const startIndex = parseInt(document.getElementById('start-time').value), 
+                  endIndex = parseInt(document.getElementById('end-time').value);
+            const allowedRanges = uniqueTimeRanges.slice(Math.min(startIndex, endIndex), Math.max(startIndex, endIndex) + 1);
 
             filteredData = allData.filter(d => 
                 years.includes(d.year) && 
                 months.includes(d.month) && 
-                types.includes(d.type) &&
-                days.includes(d.day) &&
-                allowedRanges.includes(d.timeRange) &&
-                (selectedWard === 'ALL' || d.ward === selectedWard) &&
-                (!isRuleOut || d.tat <= 180) 
+                types.includes(d.type) && 
+                days.includes(d.day) && 
+                wardClasses.includes(d.wardClass) &&
+                allowedRanges.includes(d.timeRange) && 
+                (currentSelectedWard === 'ALL' || d.ward === currentSelectedWard) && 
+                (!isRuleOut || d.tat <= 180)
             );
             updateDashboard();
         }
 
+        function getCheckedValues(group) { return Array.from(document.querySelectorAll(`input[data-group="${group}"]:checked`)).map(cb => cb.value); }
+
+        function resetFilters() {
+            document.getElementById('rule-out-tat').checked = true;
+            document.querySelectorAll('input[data-group="year"], input[data-group="day"], input[data-group="wardClass"]').forEach(cb => cb.checked = true);
+            const months = document.querySelectorAll('input[data-group="month"]');
+            months.forEach((cb, i) => cb.checked = (i === months.length - 1));
+            document.querySelectorAll('input[data-group="type"]').forEach(cb => cb.checked = (cb.value === 'Normal'));
+            document.getElementById('start-time').value = 0;
+            document.getElementById('end-time').value = uniqueTimeRanges.length - 1;
+            document.getElementById('ward-search-input').value = '';
+            onWardClassChange();
+            selectWard('ALL');
+        }
+
         function switchWardTab(tab) {
             currentWardTab = tab;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('tab-' + tab.toLowerCase()).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === 'tab-' + tab.toLowerCase()));
             updateTopWards(filteredData);
+        }
+
+        function updateDistTab(priority) {
+            currentDistPriority = priority;
+            document.querySelectorAll('.dist-tab').forEach(b => b.classList.toggle('active', b.id === 'dist-tab-' + priority.toLowerCase()));
+            updateDashboard();
         }
 
         function updateTopWards(data) {
             const wardCounts = {};
             data.forEach(item => {
                 const isStat = item.priority.toUpperCase().includes('STAT');
-                if ((currentWardTab === 'STAT' && isStat) || (currentWardTab === 'NORMAL' && !isStat)) {
-                    wardCounts[item.ward] = (wardCounts[item.ward] || 0) + item.reqCount;
-                }
+                if ((currentWardTab === 'STAT' && isStat) || (currentWardTab === 'NORMAL' && !isStat)) wardCounts[item.ward] = (wardCounts[item.ward] || 0) + item.reqCount;
             });
-
-            const sortedWards = Object.entries(wardCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 10);
-
+            const sortedWards = Object.entries(wardCounts).sort((a, b) => b[1] - a[1]).slice(0, 10);
             const container = document.getElementById('top-wards-list');
-            container.innerHTML = '';
-
-            if (sortedWards.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-400 text-xs py-10 uppercase font-bold tracking-widest">No Data Found</p>';
-                return;
-            }
-
-            const maxVal = sortedWards[0][1];
-            const accentColor = currentWardTab === 'STAT' ? 'rose' : 'sky';
-
+            container.innerHTML = sortedWards.length ? '' : '<p class="col-span-full text-center text-slate-400 text-xs py-10 uppercase font-bold">No Data Found</p>';
+            const maxVal = sortedWards[0]?.[1] || 1;
+            const accent = currentWardTab === 'STAT' ? 'rose' : 'sky';
             sortedWards.forEach(([ward, count], idx) => {
-                const percentage = (count / maxVal) * 100;
-                const rank = idx + 1;
-                
-                let rankBadge = '';
-                let rankStyle = '';
-                let textStyle = 'text-slate-700';
-
-                // Golden/Silver/Bronze effects for Top 3
-                if (rank === 1) {
-                    rankBadge = `<div class="w-8 h-8 rounded-lg bg-amber-400 text-white flex items-center justify-center shadow-lg animate-crown"><i class="fas fa-crown text-xs"></i></div>`;
-                    rankStyle = 'text-amber-500 scale-110 origin-left';
-                    textStyle = 'text-amber-700 font-extrabold';
-                } else if (rank === 2) {
-                    rankBadge = `<div class="w-8 h-8 rounded-lg bg-slate-300 text-white flex items-center justify-center shadow-md"><i class="fas fa-medal text-xs"></i></div>`;
-                    rankStyle = 'text-slate-400';
-                } else if (rank === 3) {
-                    rankBadge = `<div class="w-8 h-8 rounded-lg bg-orange-400 text-white flex items-center justify-center shadow-md"><i class="fas fa-medal text-xs"></i></div>`;
-                    rankStyle = 'text-orange-500';
-                } else {
-                    rankBadge = `<div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center text-xs font-black">#${rank}</div>`;
-                }
-
-                container.innerHTML += `
-                    <div class="space-y-3 group ${rankStyle} transition-all duration-300">
-                        <div class="flex justify-between items-end text-sm gap-4">
-                            <div class="flex items-center gap-4 flex-1">
-                                ${rankBadge}
-                                <span class="${textStyle} leading-relaxed truncate text-base">
-                                    ${ward}
-                                </span>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-${accentColor}-600 font-black whitespace-nowrap text-lg block leading-none">
-                                    ${count.toLocaleString()}
-                                </span>
-                                <span class="text-[9px] text-slate-400 uppercase font-black tracking-tighter">Total Requests</span>
-                            </div>
-                        </div>
-                        <div class="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden shadow-inner border border-slate-50">
-                            <div class="h-full bg-gradient-to-r from-${accentColor}-400 to-${accentColor}-600 transition-all duration-1000 ease-out shadow-sm" style="width: ${percentage}%"></div>
-                        </div>
-                    </div>
-                `;
+                const pct = (count / maxVal) * 100;
+                const wardClass = classifyWard(ward);
+                const badge = idx === 0 ? `<div class="w-8 h-8 rounded-lg bg-amber-400 text-white flex items-center justify-center shadow-lg"><i class="fas fa-crown text-[10px]"></i></div>` : `<div class="w-8 h-8 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 flex items-center justify-center text-[10px] font-black">#${idx+1}</div>`;
+                container.innerHTML += `<div class="space-y-3"><div class="flex justify-between items-end text-sm gap-4"><div class="flex items-center gap-3 flex-1">${badge}<div class="truncate"><span class="text-slate-700 font-bold block truncate">${ward}</span><span class="text-[9px] font-bold ${wardClass === 'IPD' ? 'text-rose-400' : 'text-sky-400'} uppercase">${wardClass}</span></div></div><div class="text-right"><span class="text-${accent}-600 font-black text-lg block leading-none">${count.toLocaleString()}</span></div></div><div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-${accent}-500 transition-all duration-1000" style="width: ${pct}%"></div></div></div>`;
             });
         }
 
         function updateDashboard() {
-            const data = filteredData;
-            let totalRequests = 0; 
-            let sumStatCount = 0;
-            let sumNormalCount = 0;
-            let weightedTatSum = 0;
-            const categories = {};
+            let total = 0, stat = 0, normal = 0, wSum = 0, distTotal = 0;
+            const cats = {}, dist = { 'u30': { l: '< 30 min', c: 0, cl: 'bg-emerald-500' }, '30-45': { l: '30-45 min', c: 0, cl: 'bg-teal-500' }, '45-60': { l: '45-60 min', c: 0, cl: 'bg-sky-500' }, '60-75': { l: '60-75 min', c: 0, cl: 'bg-blue-500' }, '75-90': { l: '75-90 min', c: 0, cl: 'bg-indigo-500' }, '90-120': { l: '90-120 min', c: 0, cl: 'bg-purple-500' }, 'o120': { l: '> 120 min', c: 0, cl: 'bg-rose-500' } };
 
-            data.forEach(item => {
-                const count = item.reqCount; 
-                const weight = item.tat * count; 
-                totalRequests += count; 
-                weightedTatSum += weight;
-
-                if (item.priority.toUpperCase().includes('STAT')) {
-                    sumStatCount += count;
-                } else {
-                    sumNormalCount += count;
+            filteredData.forEach(item => {
+                const c = item.reqCount, w = item.tat * c, isStat = item.priority.toUpperCase().includes('STAT');
+                total += c; wSum += w;
+                if (isStat) stat += c; else normal += c;
+                const matchesDist = (currentDistPriority === 'ALL') || (currentDistPriority === 'STAT' && isStat) || (currentDistPriority === 'NORMAL' && !isStat);
+                if (matchesDist) {
+                    distTotal += c;
+                    if (item.tat < 30) dist.u30.c += c; else if (item.tat < 45) dist['30-45'].c += c; else if (item.tat < 60) dist['45-60'].c += c; else if (item.tat < 75) dist['60-75'].c += c; else if (item.tat < 90) dist['75-90'].c += c; else if (item.tat < 120) dist['90-120'].c += c; else dist.o120.c += c;
                 }
-
-                if (!categories[item.category]) categories[item.category] = { weightedSum: 0, totalCount: 0 };
-                categories[item.category].weightedSum += weight;
-                categories[item.category].totalCount += count;
+                if (!cats[item.category]) cats[item.category] = { w: 0, c: 0 };
+                cats[item.category].w += w; cats[item.category].c += c;
             });
 
-            document.getElementById('total-cases').innerText = totalRequests.toLocaleString();
-            document.getElementById('avg-per-day').innerText = (totalRequests / WORKING_DAYS).toFixed(1);
-            document.getElementById('avg-tat-total').innerText = totalRequests > 0 ? (weightedTatSum / totalRequests).toFixed(1) : '0';
-            
-            document.getElementById('priority-stat').innerText = sumStatCount.toLocaleString();
-            document.getElementById('avg-stat-day').innerText = (sumStatCount / WORKING_DAYS).toFixed(1);
-            document.getElementById('priority-normal').innerText = sumNormalCount.toLocaleString();
-            document.getElementById('avg-normal-day').innerText = (sumNormalCount / WORKING_DAYS).toFixed(1);
+            document.getElementById('total-cases').innerText = total.toLocaleString();
+            document.getElementById('avg-tat-total').innerText = total ? (wSum / total).toFixed(1) : '0';
+            document.getElementById('priority-stat').innerText = stat.toLocaleString();
+            document.getElementById('avg-stat-day').innerText = (stat / WORKING_DAYS).toFixed(1);
+            document.getElementById('priority-normal').innerText = normal.toLocaleString();
+            document.getElementById('avg-normal-day').innerText = (normal / WORKING_DAYS).toFixed(1);
 
-            document.getElementById('row-count').innerText = `TOTAL CASES: ${totalRequests.toLocaleString()} | (${data.length.toLocaleString()} ROWS)`;
-
-            const statPct = totalRequests > 0 ? Math.round((sumStatCount / totalRequests) * 100) : 0;
-            document.getElementById('stat-bar').style.width = statPct + '%';
-            document.getElementById('normal-bar').style.width = (100 - statPct) + '%';
-            document.getElementById('stat-bar').innerText = statPct > 10 ? statPct + '%' : '';
-            document.getElementById('normal-bar').innerText = (100 - statPct) > 10 ? (100 - statPct) + '%' : '';
-
-            updateTopWards(data);
-
-            const listContainer = document.getElementById('category-tat-list');
-            listContainer.innerHTML = '';
-            
-            const sortedCategories = Object.entries(categories)
-                .sort((a,b) => b[1].totalCount - a[1].totalCount);
-
-            if (sortedCategories.length === 0) {
-                listContainer.innerHTML = '<p class="col-span-full text-center py-10 text-slate-400 font-bold uppercase tracking-widest text-xs">No Category Data</p>';
-                return;
-            }
-
-            sortedCategories.forEach(([name, val]) => {
-                const catAvgTat = (val.weightedSum / val.totalCount).toFixed(1);
-                listContainer.innerHTML += `
-                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center transition-all hover:bg-white hover:shadow-md hover:border-indigo-100 group">
-                        <div class="flex items-center gap-3">
-                            <div class="w-1.5 h-8 rounded-full bg-slate-200 group-hover:bg-indigo-500 transition-colors"></div>
-                            <div>
-                                <p class="text-sm font-bold text-slate-700 truncate max-w-[150px]">${name}</p>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Vol: ${val.totalCount.toLocaleString()}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-2xl font-black text-indigo-600 leading-none">${catAvgTat}</p>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Minutes</p>
-                        </div>
-                    </div>
-                `;
+            const chartContainer = document.getElementById('tat-range-chart');
+            chartContainer.innerHTML = '';
+            const maxDist = Math.max(...Object.values(dist).map(d => d.c)) || 1;
+            Object.values(dist).forEach(d => {
+                chartContainer.innerHTML += `<div class="space-y-1"><div class="flex justify-between items-center text-[11px] font-bold text-slate-500"><span>${d.l}</span><span class="text-slate-800">${d.c.toLocaleString()} <span class="text-slate-400 font-normal">(${distTotal ? ((d.c/distTotal)*100).toFixed(1) : 0}%)</span></span></div><div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-50"><div class="h-full ${d.cl} bar-transition" style="width: ${(d.c/maxDist)*100}%"></div></div></div>`;
             });
+
+            const catList = document.getElementById('category-tat-list');
+            catList.innerHTML = '';
+            Object.entries(cats).sort((a,b) => b[1].c - a[1].c).forEach(([n, v]) => {
+                catList.innerHTML += `<div class="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center"><div class="flex items-center gap-3"><div><p class="text-sm font-bold text-slate-700">${n}</p><p class="text-[10px] font-bold text-slate-400 uppercase">Vol: ${v.c.toLocaleString()}</p></div></div><div class="text-right"><p class="text-2xl font-black text-indigo-600 leading-none">${(v.w / v.c).toFixed(1)}</p><p class="text-[9px] font-bold text-slate-300 uppercase">Min.</p></div></div>`;
+            });
+            updateTopWards(filteredData);
         }
 
-        window.onload = init;
+        window.onload = fetchData;
     </script>
 </body>
 </html>
