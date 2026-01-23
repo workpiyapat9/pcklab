@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webapphub Hub - PCK LAB</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Kanit', sans-serif; 
+            background-color: #f1f5f9; 
+            font-size: 1.1rem; 
+            margin: 0;
+            /* แก้ไข: ใช้ min-height เพื่อให้เลื่อนหน้าจอได้ */
+            min-height: 100vh;
+        }
+        .card { background: white; border-radius: 1.5rem; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); overflow: hidden; }
+        
+        .menu-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid transparent; cursor: pointer; }
+        .menu-card:hover { transform: translateY(-5px); border-color: #3b82f6; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); }
+        
+        .menu-card.disabled { cursor: default; opacity: 0.7; }
+        .menu-card.disabled:hover { transform: none; border-color: transparent; }
+        
+        .search-focus:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+
+        /* --- สไตล์ปุ่มและ Sidebar (แก้ไขให้ซ่อนปุ่มได้) --- */
+        .menu-toggle-btn {
+            position: fixed;
+            top: 25px;
+            left: 25px;
+            z-index: 100;
+            background: white;
+            padding: 14px;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Class สำหรับซ่อนปุ่มเมื่อ Sidebar เปิด */
+        .menu-toggle-btn.hidden-btn {
+            opacity: 0;
+            visibility: hidden;
+            transform: translateX(-20px);
+        }
+
+        #sidebar-container {
+            position: fixed;
+            top: 0;
+            left: -320px; 
+            width: 320px;
+            height: 100vh;
+            background: white;
+            z-index: 110; /* สูงกว่าปุ่มและ Overlay */
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-right: 1px solid #e2e8f0;
+        }
+        #sidebar-container.active { left: 0; }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            z-index: 105;
+        }
+        .overlay.show { display: block; }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+
+    <button id="menuBtn" class="menu-toggle-btn" onclick="toggleMenu()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+        </svg>
+    </button>
+
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+    <div id="sidebar-container"></div>
+
+    <div class="max-w-6xl mx-auto pt-16">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6 ml-16 md:ml-20">
+            <div>
+                <h2 class="text-3xl md:text-4xl font-bold text-slate-800">Webapp Hub</h2>
+                <p class="text-slate-500 mt-2 text-lg">เลือกใช้แอปภายในห้องแลปต่างๆ</p>
+            </div>
+
+            <div class="relative w-full md:w-80">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </span>
+                <input 
+                    type="text" 
+                    id="hubSearch" 
+                    onkeyup="searchHub()"
+                    placeholder="ค้นหาแอป...." 
+                    class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm search-focus transition-all shadow-sm"
+                >
+            </div>
+        </div>
+
+        <div id="hub-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <div class="card p-8 menu-card bg-white" data-title="tshstock" onclick="window.location.href='tshstock.html'">
+                <div class="w-14 h-14 bg-blue-100 text-blue-600 text-3xl flex items-center justify-center rounded-2xl mb-6">📜</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">tshstock</h3>
+                <p class="text-sm text-slate-400">ติดตามบันทึกกระดาษซักเลือด</p>
+                <div class="mt-6 flex items-center text-blue-600 font-bold text-sm">
+                    <span>เข้าใช้ระบบบันทึก</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </div>
+
+            <div class="card p-8 menu-card bg-white" data-title="CD4control" onclick="window.location.href='CD4control.html'">
+                <div class="w-14 h-14 bg-blue-100 text-blue-600 text-3xl flex items-center justify-center rounded-2xl mb-6">✨</div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">CD4control</h3>
+                <p class="text-sm text-slate-400">บันทึกผลDaily QC CD4</p>
+                <div class="mt-6 flex items-center text-blue-600 font-bold text-sm">
+                    <span>เข้าใช้ระบบบันทึก</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </div>
+            </div>       
+
+           <div class="card p-8 menu-card disabled bg-white border-dashed border-2 border-slate-200" data-title="รออัพเดต">
+                <div class="w-14 h-14 bg-slate-50 text-slate-300 text-3xl flex items-center justify-center rounded-2xl mb-6">🔄</div>
+                <h3 class="text-xl font-bold text-slate-400 mb-2">รออัพเดต</h3>
+                <p class="text-sm text-slate-300">รออัพเดต (Coming Soon)</p>
+            </div>
+
+            <div class="card p-8 menu-card disabled bg-white border-dashed border-2 border-slate-200" data-title="รออัพเดต">
+                <div class="w-14 h-14 bg-slate-50 text-slate-300 text-3xl flex items-center justify-center rounded-2xl mb-6">🔄</div>
+                <h3 class="text-xl font-bold text-slate-400 mb-2">รออัพเดต</h3>
+                <p class="text-sm text-slate-300">รออัพเดต (Coming Soon)</p>
+            </div>
+
+            <div class="card p-8 menu-card disabled bg-white border-dashed border-2 border-slate-200" data-title="รออัพเดต">
+                <div class="w-14 h-14 bg-slate-50 text-slate-300 text-3xl flex items-center justify-center rounded-2xl mb-6">🔄</div>
+                <h3 class="text-xl font-bold text-slate-400 mb-2">รออัพเดต</h3>
+                <p class="text-sm text-slate-300">รออัพเดต (Coming Soon)</p>
+            </div>
+
+            <div class="card p-8 menu-card disabled bg-white border-dashed border-2 border-slate-200" data-title="รออัพเดต">
+                <div class="w-14 h-14 bg-slate-50 text-slate-300 text-3xl flex items-center justify-center rounded-2xl mb-6">🔄</div>
+                <h3 class="text-xl font-bold text-slate-400 mb-2">รออัพเดต</h3>
+                <p class="text-sm text-slate-300">รออัพเดต (Coming Soon)</p>
+            </div>
+
+        </div>
+
+        <div id="no-results" class="hidden py-20 text-center flex flex-col items-center">
+            <div class="text-6xl mb-4 opacity-20">🔍</div>
+            <div class="text-slate-400 italic font-medium">ไม่พบแดชบอร์ดที่ตรงกับคำค้นหา</div>
+        </div>
+    </div>
+
+    <script>
+        // ฟังก์ชันเปิด/ปิด Sidebar พร้อมซ่อนปุ่ม
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar-container');
+            const overlay = document.getElementById('overlay');
+            const menuBtn = document.getElementById('menuBtn');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('show');
+
+            // เพิ่ม logic ซ่อน/แสดงปุ่มเมนู
+            if (sidebar.classList.contains('active')) {
+                menuBtn.classList.add('hidden-btn');
+            } else {
+                menuBtn.classList.remove('hidden-btn');
+            }
+        }
+
+        // โหลด Sidebar
+        fetch('sidebar.html')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('sidebar-container').innerHTML = data;
+                const activeLink = document.getElementById('link-page2');
+                if (activeLink) activeLink.classList.add('active');
+            })
+            .catch(err => console.error('Sidebar error:', err));
+
+        // ฟังก์ชันค้นหา
+        function searchHub() {
+            const input = document.getElementById('hubSearch');
+            const filter = input.value.toLowerCase();
+            const grid = document.getElementById('hub-grid');
+            const cards = grid.getElementsByClassName('card');
+            const noResults = document.getElementById('no-results');
+            let visibleCount = 0;
+
+            for (let i = 0; i < cards.length; i++) {
+                const title = cards[i].getAttribute('data-title').toLowerCase();
+                if (title.includes(filter)) {
+                    cards[i].style.display = "";
+                    visibleCount++;
+                } else {
+                    cards[i].style.display = "none";
+                }
+            }
+
+            if (visibleCount === 0) {
+                noResults.classList.remove('hidden');
+                grid.classList.add('hidden');
+            } else {
+                noResults.classList.add('hidden');
+                grid.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

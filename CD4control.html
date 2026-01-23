@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CD4/CD3 Control Tracking System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f1f5f9;
+        }
+        .tab-active { 
+            background-color: white;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            color: #4f46e5; 
+            font-weight: 700; 
+        }
+        .chart-container { 
+            position: relative; 
+            height: 280px; 
+            width: 100%; 
+        }
+        .input-group-row { 
+            display: grid; 
+            grid-template-columns: 140px 1fr 1fr 1fr 1fr; 
+            gap: 1.5rem; 
+            align-items: center; 
+        }
+        @media (max-width: 768px) { 
+            .input-group-row { grid-template-columns: 1fr 1fr; } 
+            .level-label { grid-column: span 2; } 
+        }
+        .selector-btn.active { 
+            background-color: white; 
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); 
+            color: #4f46e5; 
+            font-weight: 700; 
+        }
+        .loading-overlay { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(255,255,255,0.95); 
+            display: none; 
+            flex-direction: column;
+            align-items: center; 
+            justify-content: center; 
+            z-index: 100; 
+            gap: 1.5rem; 
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12">
+    <div id="loader" class="loading-overlay">
+        <div class="relative">
+            <div class="h-16 w-16 rounded-full border-4 border-slate-200 border-t-indigo-600 animate-spin"></div>
+        </div>
+        <p id="loader-text" class="text-lg font-semibold text-slate-600 animate-pulse">กำลังซิงค์ข้อมูล...</p>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <header class="mb-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl font-black text-slate-900 tracking-tight italic">
+                    <span class="text-indigo-600">CD4/CD3</span> LAB CONTROL
+                </h1>
+                <p class="text-slate-500 font-medium">ระบบบริหารจัดการผลการทดสอบคุณภาพแบบคลาวด์</p>
+            </div>
+            <nav class="flex bg-slate-200/60 p-1.5 rounded-2xl shadow-inner backdrop-blur-md">
+                <button onclick="switchTab('input')" id="tab-input" class="px-6 py-2.5 rounded-xl transition-all tab-active">ป้อนข้อมูล</button>
+                <button onclick="switchTab('stats')" id="tab-stats" class="px-6 py-2.5 rounded-xl text-slate-500 hover:text-indigo-600 transition-all font-semibold">กราฟวิเคราะห์</button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="px-6 py-2.5 rounded-xl text-slate-500 hover:text-indigo-600 transition-all font-semibold">ตั้งค่า Lot</button>
+            </nav>
+        </header>
+
+        <!-- Main Input Section -->
+        <div id="page-input" class="space-y-6 animate-in fade-in duration-500">
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block">Date of Analysis</span>
+                        <input type="date" id="common_date" class="bg-transparent border-none p-0 font-bold text-xl text-slate-800 focus:ring-0 outline-none">
+                    </div>
+                </div>
+                <div class="text-sm text-slate-400 font-medium italic">* กรอกข้อมูลตามระดับ Control ที่ทดสอบจริง</div>
+            </div>
+
+            <form id="multiEntryForm" class="space-y-4">
+                <div id="inputRowsContainer" class="space-y-4"></div>
+                <button type="submit" class="group w-full bg-slate-900 text-white font-bold py-6 rounded-[2rem] shadow-xl hover:bg-indigo-600 transform active:scale-[0.99] transition-all flex items-center justify-center gap-3 text-xl">
+                    <span>บันทึกลงฐานข้อมูล Google Sheets</span>
+                    <svg class="group-hover:translate-x-1 transition-transform" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- Statistics/Charts Section -->
+        <div id="page-stats" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col lg:flex-row items-center justify-between gap-6">
+                <div class="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner w-full lg:w-auto">
+                    <button onclick="setViewLevel('L')" id="btn-view-L" class="selector-btn flex-1 lg:flex-none px-10 py-3 rounded-xl text-sm transition-all active">LOW</button>
+                    <button onclick="setViewLevel('N')" id="btn-view-N" class="selector-btn flex-1 lg:flex-none px-10 py-3 rounded-xl text-sm transition-all">NORMAL</button>
+                    <button onclick="setViewLevel('H')" id="btn-view-H" class="selector-btn flex-1 lg:flex-none px-10 py-3 rounded-xl text-sm transition-all">COE</button>
+                </div>
+
+                <div class="flex items-center gap-4 w-full lg:w-auto bg-slate-50 px-6 py-2 rounded-2xl border border-slate-100">
+                    <label class="text-sm font-bold text-slate-500 whitespace-nowrap">Lot Select:</label>
+                    <select id="active_lot_selector" onchange="updateCharts()" class="w-full lg:w-64 bg-transparent border-none font-black text-indigo-700 focus:ring-0 outline-none"></select>
+                </div>
+            </div>
+
+            <div id="chartsContainer" class="grid grid-cols-1 gap-8"></div>
+            
+            <div id="noDataMessage" class="hidden bg-white rounded-[3rem] p-32 text-center shadow-sm border border-slate-100">
+                <div class="mx-auto w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 mb-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="M12 18v-6"/><path d="M8 15h8"/></svg>
+                </div>
+                <p class="text-slate-500 text-xl font-bold">ไม่พบข้อมูลสำหรับ Lot ที่ระบุ</p>
+                <p class="text-slate-400 mt-2">โปรดตรวจสอบชื่อ Lot ในหน้าตั้งค่า หรือรอการซิงค์ข้อมูล</p>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="page-settings" class="hidden">
+            <div class="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-12">
+                    <div>
+                        <h2 class="text-3xl font-black text-slate-900 italic">LOT CONFIGURATION</h2>
+                        <p class="text-slate-500 mt-2 font-medium">ตั้งค่า Mean และ 2SD สำหรับแต่ละชุดน้ำยาควบคุม</p>
+                    </div>
+                    <div class="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner self-stretch md:self-auto">
+                        <button onclick="setSettingsLevel('L')" id="btn-set-L" class="selector-btn px-8 py-3 rounded-xl text-sm transition-all active">LOW</button>
+                        <button onclick="setSettingsLevel('N')" id="btn-set-N" class="selector-btn px-8 py-3 rounded-xl text-sm transition-all">NORMAL</button>
+                        <button onclick="setSettingsLevel('H')" id="btn-set-H" class="selector-btn px-8 py-3 rounded-xl text-sm transition-all">COE</button>
+                    </div>
+                </div>
+
+                <div id="activeSettingCard" class="animate-in slide-in-from-bottom-4 duration-500"></div>
+
+                <div class="mt-12 p-8 bg-indigo-50 rounded-3xl border border-indigo-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="flex items-start gap-4">
+                        <div class="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center shrink-0">!</div>
+                        <p class="text-indigo-900 text-sm leading-relaxed">
+                            <span class="font-bold block">ระบบประวัติอัตโนมัติ (Auto-History)</span>
+                            หากคุณเปลี่ยนชื่อ <strong>Lot ID</strong> ระบบจะสร้างรายการใหม่ในชีท Settings ทันทีโดยไม่ทับข้อมูลเก่า 
+                            คุณสามารถย้อนกลับมาดู Lot เดิมได้ตลอดเวลา
+                        </p>
+                    </div>
+                    <button onclick="saveSettingsToCloud()" class="w-full md:w-auto bg-slate-900 text-white font-black py-4 px-10 rounded-2xl shadow-xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        บันทึกการตั้งค่า
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * กรุณาใส่ Web App URL ที่ได้จาก Google Apps Script ที่นี่
+         */
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxAb3ti8gmfBn393FbiDlltXlCb-BlXy1wmGV4JaTiIPOyQKK7Kxp9WJhlkrIlqP8l1KQ/exec"; 
+        
+        let allData = [];
+        let settingsHistory = [];
+        let activeSettingsMap = {}; 
+        let currentViewLevel = 'L'; 
+        let currentSettingsLevel = 'L';
+        let charts = []; 
+        
+        const levels = ['L', 'N', 'H'];
+        const params = [
+            { id: 'pc_cd4', label: '% CD4' }, 
+            { id: 'ab_cd4', label: 'Abs CD4' },
+            { id: 'pc_cd3', label: '% CD3' }, 
+            { id: 'ab_cd3', label: 'Abs CD3' }
+        ];
+
+        function showLoader(show, text = "กำลังประมวลผล...") { 
+            const loader = document.getElementById('loader');
+            document.getElementById('loader-text').innerText = text;
+            loader.style.display = show ? 'flex' : 'none'; 
+        }
+
+        async function init() {
+            if (SCRIPT_URL.includes("YOUR_SCRIPT_URL")) {
+                console.warn("Please set your Google Script URL first.");
+                return;
+            }
+            showLoader(true, "กำลังซิงค์ข้อมูล Cloud...");
+            try {
+                const [sRes, dRes] = await Promise.all([
+                    fetchDataJSONP('readSettings'),
+                    fetchDataJSONP('read')
+                ]);
+                
+                settingsHistory = Array.isArray(sRes) ? sRes : [];
+                activeSettingsMap = {};
+                levels.forEach(lv => {
+                    const latest = [...settingsHistory].reverse().find(s => s.level === lv);
+                    if (latest) activeSettingsMap[lv] = latest;
+                });
+                
+                allData = Array.isArray(dRes) ? dRes.map(item => ({
+                    date: item.Date || item.date || item[0],
+                    control_id: String(item["Lot-id"] || item.control_id || item[1] || "").trim().toUpperCase(),
+                    pc_cd4: item["%CD4"] || item.pc_cd4 || item[2],
+                    ab_cd4: item["Abs.CD4"] || item.ab_cd4 || item[3],
+                    pc_cd3: item["%CD3"] || item.pc_cd3 || item[4],
+                    ab_cd3: item["Abs.CD3"] || item.ab_cd3 || item[5]
+                })) : [];
+                
+                populateActiveLotSelector();
+                renderInputRows();
+                if (!document.getElementById('page-stats').classList.contains('hidden')) updateCharts();
+            } catch (e) { 
+                console.error("Initialization Failed:", e);
+            }
+            showLoader(false);
+        }
+
+        function fetchDataJSONP(action) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'cb_' + Math.round(100000 * Math.random());
+                const script = document.createElement('script');
+                window[callbackName] = (data) => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    resolve(data);
+                };
+                script.onerror = () => reject(new Error('Network connectivity issue'));
+                script.src = `${SCRIPT_URL}?action=${action}&callback=${callbackName}`;
+                document.body.appendChild(script);
+                setTimeout(() => { if (window[callbackName]) reject(new Error('Timeout')); }, 30000);
+            });
+        }
+
+        function switchTab(target) {
+            document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
+            document.getElementById(`page-${target}`).classList.remove('hidden');
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.classList.remove('tab-active', 'text-slate-500'));
+            document.getElementById(`tab-${target}`).classList.add('tab-active');
+            
+            if (target === 'stats') { populateActiveLotSelector(); updateCharts(); }
+            if (target === 'settings') renderSettingsCard();
+            if (target === 'input') renderInputRows();
+        }
+
+        function setViewLevel(lv) {
+            currentViewLevel = lv;
+            document.querySelectorAll('[id^="btn-view-"]').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-view-${lv}`).classList.add('active');
+            populateActiveLotSelector();
+            updateCharts();
+        }
+
+        function populateActiveLotSelector() {
+            const select = document.getElementById('active_lot_selector');
+            const lv = currentViewLevel;
+            const uniqueLots = [...new Set(allData.filter(d => d.control_id).map(d => d.control_id))];
+            
+            let filteredLots = uniqueLots.filter(lot => {
+                if (lv === 'L') return lot.endsWith('L');
+                if (lv === 'N') return lot.endsWith('N');
+                if (lv === 'H') return lot.startsWith('C');
+                return false;
+            });
+            
+            const activeLot = activeSettingsMap[lv]?.lot || "";
+            if (activeLot && !filteredLots.includes(activeLot)) filteredLots.push(activeLot);
+
+            if (filteredLots.length > 0) {
+                filteredLots.sort().reverse();
+                select.innerHTML = filteredLots.map(lot => 
+                    `<option value="${lot}" ${lot === activeLot ? 'selected' : ''}>
+                        ${lot} ${lot === activeLot ? '• Active' : ''}
+                    </option>`).join('');
+            } else {
+                select.innerHTML = `<option value="">-- No Data --</option>`;
+            }
+        }
+
+        function renderInputRows() {
+            const container = document.getElementById('inputRowsContainer');
+            container.innerHTML = levels.map(lv => {
+                const theme = lv === 'L' ? 'amber' : lv === 'N' ? 'blue' : 'indigo';
+                const labelText = lv === 'L' ? 'Low Level' : lv === 'N' ? 'Normal Level' : 'COE Level';
+                return `
+                <div class="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 hover:border-indigo-200 transition-colors">
+                    <div class="input-group-row">
+                        <div class="level-label">
+                            <span class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 block">${labelText}</span>
+                            <input type="text" id="id_${lv}" value="${activeSettingsMap[lv]?.lot || ''}" placeholder="Lot ID" class="w-full bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-black uppercase outline-none shadow-inner focus:ring-1 focus:ring-indigo-300">
+                        </div>
+                        ${params.map(p => `
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-300 uppercase ml-1">${p.label}</span>
+                                <input type="number" step="0.01" id="${p.id}_${lv}" class="w-full px-4 py-4 bg-slate-50 border-none rounded-2xl text-center font-black text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20" placeholder="0.00">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function setSettingsLevel(lv) {
+            currentSettingsLevel = lv;
+            document.querySelectorAll('[id^="btn-set-"]').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-set-${lv}`).classList.add('active');
+            renderSettingsCard();
+        }
+
+        function renderSettingsCard() {
+            const lv = currentSettingsLevel;
+            const container = document.getElementById('activeSettingCard');
+            const current = activeSettingsMap[lv] || {};
+            
+            container.innerHTML = `
+                <div class="bg-slate-50 p-10 rounded-[2.5rem] border border-slate-100">
+                    <div class="max-w-md mb-10">
+                        <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Current Lot ID</label>
+                        <input type="text" id="set_lot" value="${current.lot || ''}" class="w-full mt-2 px-6 py-4 border-none bg-white rounded-2xl font-black text-xl shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 uppercase">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        ${params.map(p => `
+                            <div class="bg-white p-6 rounded-[2rem] shadow-sm border border-slate-50">
+                                <span class="font-black text-slate-800 block mb-6 border-l-4 border-indigo-500 pl-3">${p.label}</span>
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 font-black uppercase ml-1">Target Mean</label>
+                                        <input type="number" step="0.01" id="set_mean_${p.id}" value="${current[`mean_${p.id}`] || ''}" class="w-full bg-slate-50 border-none rounded-xl p-4 text-lg font-black outline-none shadow-inner focus:ring-2 focus:ring-indigo-500/10">
+                                    </div>
+                                    <div>
+                                        <label class="text-[10px] text-slate-400 font-black uppercase ml-1">2SD Range</label>
+                                        <input type="number" step="0.01" id="set_sd2_${p.id}" value="${current[`sd2_${p.id}`] || ''}" class="w-full bg-slate-50 border-none rounded-xl p-4 text-lg font-black outline-none shadow-inner focus:ring-2 focus:ring-rose-500/10">
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+        }
+
+        async function saveSettingsToCloud() {
+            const lot = document.getElementById('set_lot').value.toUpperCase().trim();
+            if(!lot) { alert("กรุณาระบุชื่อ Lot"); return; }
+            
+            const payload = { action: 'saveSettings', lot: lot, level: currentSettingsLevel };
+            params.forEach(p => {
+                payload[`mean_${p.id}`] = document.getElementById(`set_mean_${p.id}`).value;
+                payload[`sd2_${p.id}`] = document.getElementById(`set_sd2_${p.id}`).value;
+            });
+            
+            showLoader(true, "กำลังอัปเดตค่ามาตรฐาน...");
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+                setTimeout(init, 2000);
+            } catch (e) { console.error(e); }
+        }
+
+        document.getElementById('multiEntryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const date = document.getElementById('common_date').value;
+            if(!date) { alert("กรุณาเลือกวันที่"); return; }
+            
+            showLoader(true, "กำลังบันทึกข้อมูลผลตรวจ...");
+            try {
+                for (let lv of levels) {
+                    const id = document.getElementById(`id_${lv}`).value.toUpperCase().trim();
+                    const entry = { action: 'insert', date: date, control_id: id };
+                    let hasVal = false;
+                    params.forEach(p => {
+                        const val = document.getElementById(`${p.id}_${lv}`).value;
+                        if(val) { entry[p.id] = val; hasVal = true; }
+                    });
+                    if (hasVal && id) {
+                        await fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(entry) });
+                    }
+                }
+                alert("บันทึกข้อมูลสำเร็จ");
+                init();
+            } catch (e) { console.error(e); }
+            showLoader(false);
+        });
+
+        function updateCharts() {
+            charts.forEach(c => c.destroy());
+            charts = [];
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = '';
+            
+            const selectedLot = document.getElementById('active_lot_selector')?.value;
+            if (!selectedLot || selectedLot === "") { 
+                document.getElementById('noDataMessage').classList.remove('hidden'); 
+                return; 
+            }
+
+            const filtered = allData.filter(d => d.control_id === selectedLot).sort((a,b) => new Date(a.date) - new Date(b.date));
+            if (filtered.length === 0) { 
+                document.getElementById('noDataMessage').classList.remove('hidden'); 
+                return; 
+            }
+            document.getElementById('noDataMessage').classList.add('hidden');
+
+            const lotSet = settingsHistory.find(s => String(s.lot).toUpperCase() === selectedLot);
+            const themeColor = currentViewLevel === 'L' ? '#f59e0b' : currentViewLevel === 'N' ? '#3b82f6' : '#6366f1';
+
+            const wrapper = document.createElement('div');
+            wrapper.className = "bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100";
+            wrapper.innerHTML = `
+                <div class="mb-10 flex justify-between items-center border-b border-slate-50 pb-6">
+                    <div>
+                        <span class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] block mb-1">Levey-Jennings Chart</span>
+                        <h3 class="text-2xl font-black text-slate-900">LOT ID: ${selectedLot}</h3>
+                    </div>
+                    <div class="px-5 py-2 bg-indigo-50 text-indigo-700 rounded-full text-sm font-black">
+                        N = ${filtered.length}
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12" id="canvasGrid"></div>`;
+            container.appendChild(wrapper);
+
+            params.forEach(p => {
+                const col = document.createElement('div');
+                col.className = "space-y-4";
+                col.innerHTML = `
+                    <div class="flex justify-between items-center px-2">
+                        <span class="text-sm font-black text-slate-800 uppercase tracking-wider">${p.label}</span>
+                        <span class="text-[10px] font-bold text-slate-400">Trend Analysis</span>
+                    </div>
+                    <div class="chart-container bg-slate-50 rounded-2xl p-4"><canvas id="canvas_${p.id}"></canvas></div>`;
+                wrapper.querySelector('#canvasGrid').appendChild(col);
+                
+                const mean = lotSet ? parseFloat(lotSet[`mean_${p.id}`]) : null;
+                const sd2 = lotSet ? parseFloat(lotSet[`sd2_${p.id}`]) : null;
+                
+                const datasets = [{ 
+                    label: p.label, 
+                    data: filtered.map(d => parseFloat(d[p.id])), 
+                    borderColor: themeColor, 
+                    backgroundColor: themeColor,
+                    pointBackgroundColor: '#fff', 
+                    pointBorderWidth: 3,
+                    pointRadius: 5,
+                    borderWidth: 3,
+                    tension: 0.1,
+                    fill: false 
+                }];
+
+                if (mean && !isNaN(mean)) {
+                    datasets.push({ label: 'Mean', data: filtered.map(() => mean), borderColor: '#94a3b8', borderDash: [5,5], pointRadius: 0, fill: false });
+                    if (sd2 && !isNaN(sd2)) {
+                        datasets.push({ label: '+2SD', data: filtered.map(() => mean + sd2), borderColor: '#ef4444', borderDash: [3,3], pointRadius: 0, fill: false, borderWidth: 1 });
+                        datasets.push({ label: '-2SD', data: filtered.map(() => mean - sd2), borderColor: '#ef4444', borderDash: [3,3], pointRadius: 0, fill: false, borderWidth: 1 });
+                    }
+                }
+
+                charts.push(new Chart(document.getElementById(`canvas_${p.id}`), {
+                    type: 'line',
+                    data: { labels: filtered.map(d => new Date(d.date).toLocaleDateString('th-TH', {day:'2-digit', month:'short'})), datasets: datasets },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { grid: { color: '#f1f5f9' }, ticks: { font: { weight: 'bold' } } },
+                            x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                        }
+                    }
+                }));
+            });
+        }
+
+        window.onload = () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('common_date').value = today;
+            init();
+        };
+    </script>
+</body>
+</html>
