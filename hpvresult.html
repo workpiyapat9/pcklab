@@ -10,7 +10,6 @@
     <style>
         body { font-family: 'Kanit', sans-serif; }
         .card { @apply bg-white p-6 rounded-2xl shadow-sm border border-slate-100; }
-        .stat-val { @apply text-2xl font-bold; }
         .loader {
             border: 4px solid #f3f3f3;
             border-top: 4px solid #be185d;
@@ -21,16 +20,13 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Table enhancements */
         table { font-family: 'Kanit', sans-serif; }
         th { @apply whitespace-nowrap; }
         
-        /* Link Icon Style */
         .link-icon {
             @apply inline-flex items-center justify-center ml-2 p-1.5 rounded-md bg-pink-50 text-pink-600 hover:bg-pink-600 hover:text-white transition-all duration-200;
         }
 
-        /* Separate Button Style */
         .view-btn {
             @apply px-5 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer border shadow-sm flex items-center gap-2;
         }
@@ -39,6 +35,13 @@
         }
         .view-btn.inactive {
             @apply bg-white text-slate-600 border-slate-200 hover:border-pink-300 hover:text-pink-600;
+        }
+        
+        .sticky-col {
+            @apply sticky left-0 bg-white z-10 border-r;
+        }
+        thead .sticky-col {
+            @apply bg-slate-100 z-30;
         }
     </style>
 </head>
@@ -55,15 +58,11 @@
                 
                 <div class="flex bg-black/20 p-1 rounded-xl backdrop-blur-md border border-white/10 shadow-inner">
                     <a href="hpvstock.html" class="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:bg-white/20 flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                        </svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                         สถิติการเบิก
                     </a>
                     <a href="hpvresult.html" class="px-5 py-2.5 rounded-lg text-sm font-medium bg-white text-indigo-900 shadow-sm flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                        </svg>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                         ผลการตรวจ
                     </a>
                 </div>
@@ -102,28 +101,29 @@
             </div>
         </div>
 
-        <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="card lg:col-span-1">
                 <h3 class="font-bold text-lg mb-6 text-slate-700 text-center">สัดส่วนผลการตรวจภาพรวม</h3>
                 <div class="h-80"><canvas id="typePieChart"></canvas></div>
             </div>
             <div class="card lg:col-span-2">
-                <h3 class="font-bold text-lg mb-6 text-slate-700" id="chartTitle">เปรียบเทียบผลตรวจแยกตามหน่วยงาน</h3>
+                <h3 class="font-bold text-lg mb-6 text-slate-700" id="chartTitle">เปรียบเทียบผลตรวจแยกตามหน่วยงานหลัก</h3>
                 <div class="h-80"><canvas id="hospitalBarChart"></canvas></div>
             </div>
         </div>
 
-        <!-- Data Table -->
         <div class="card overflow-hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-6">
                 <div class="flex flex-col gap-4">
-                    <h3 class="font-bold text-lg text-slate-700" id="tableTitle">ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)</h3>
-                    <!-- Separate Buttons View Switch -->
+                    <h3 class="font-bold text-lg text-slate-700" id="tableTitle">ข้อมูลรายหน่วยงานหลัก (เรียงจากยอดตรวจสูงสุด)</h3>
                     <div class="flex flex-wrap gap-3">
-                        <button onclick="switchView('hospital')" id="btn-hospital" class="view-btn active">
+                        <button onclick="switchView('main-hospital')" id="btn-main-hospital" class="view-btn active">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                            รายหน่วยงานหลัก
+                        </button>
+                        <button onclick="switchView('hospital')" id="btn-hospital" class="view-btn inactive">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                            รายหน่วยงาน
+                            รายหน่วยงานย่อย
                         </button>
                         <button onclick="switchView('district')" id="btn-district" class="view-btn inactive">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -140,7 +140,7 @@
                 <table class="min-w-full divide-y divide-slate-200" id="mainTable">
                     <thead class="bg-slate-50 text-[11px] font-bold text-slate-600">
                         <tr>
-                            <th class="px-6 py-4 text-left border-r sticky left-0 bg-slate-100 z-30" rowspan="2" id="th-name">หน่วยงาน</th>
+                            <th class="px-6 py-4 text-left border-r sticky-col z-30" rowspan="2" id="th-name">หน่วยงานหลัก</th>
                             <th class="px-4 py-2 text-center border-r border-b bg-pink-100/40" colspan="4">Self-test</th>
                             <th class="px-4 py-2 text-center border-r border-b bg-indigo-100/40" colspan="4">Clinician</th>
                             <th class="px-4 py-4 text-center border-r bg-slate-100/50" rowspan="2">LBC</th>
@@ -157,7 +157,7 @@
                             <th class="px-4 py-2 border-r">Neg</th>
                         </tr>
                     </thead>
-                    <tbody id="data-table-body" class="bg-white divide-y divide-slate-100 text-xs">
+                    <tbody id="data-table-body" class="bg-white divide-y divide-slate-100 text-xs text-center">
                     </tbody>
                     <tfoot id="data-table-foot" class="bg-slate-50 font-bold border-t-2 border-slate-200 text-xs">
                     </tfoot>
@@ -169,13 +169,14 @@
     <script>
         const SPREADSHEET_ID = '1474eE5jGXvnw7QrhOhQwt96VJGLJpTG2vTPu4OVbHxM';
         
-        // GID Settings
         const GID_HOSPITAL = '1541013318';
         const GID_DISTRICT = '199543958';
+        const GID_MAIN_HOSPITAL = '922932469';
 
-        let currentView = 'hospital'; 
+        let currentView = 'main-hospital'; 
+        let chartInstances = {};
 
-        // Hospital Links
+        // ลิงก์กลางที่ใช้ได้ทุกหน่วยงาน
         const hospitalLinks = {
             "รพ.หนองหญ้าปล้อง": "https://drive.google.com/drive/folders/1gWWliXgVGtzGYhvcmCoJYLyHonkufGZp?usp=drive_link",
             "รพ.เขาย้อย": "https://drive.google.com/drive/folders/1oSuIKWRFVmJQk9xxKTKXnGGk4ELpJRlR?usp=drive_link",
@@ -189,23 +190,53 @@
             "รพ.บ้านแหลม": "https://drive.google.com/drive/folders/1J5wR7L4s_PHkQqGZOjAjGZO5ZY9cHd9G?usp=drive_link",
             "รพ.สต.บ้านฝั่งท่า": "https://drive.google.com/drive/folders/1gVecH1NWujqc22nifl8TPJU1sQPaiDEI?usp=drive_link",
             "รพ.สต.บ้านซ่อง": "https://drive.google.com/drive/folders/1PgCZJBIPLAgqg8Cajc6EoisNJQKCXtf0?usp=drive_link",
+            "รพ.สต.ท่าแร้งออก": "https://drive.google.com/drive/folders/1wh4XFy8Ccuv41Oi2HsIwK7NvsMlS3w2M?usp=drive_link",
+            "รพ.สต.นิคม": "https://drive.google.com/drive/folders/1tHYPubSaTohj0vUUd3wp376EQgbcYqsm?usp=drive_link",
+            "รพ.สต.หนองปรง": "https://drive.google.com/drive/folders/1_k8DLmrj5dWLN8OZJaiwLoMygqzPMZ2s?usp=drive_link",
+            "รพ.สต.ห้วยแม่เพรียง": "https://drive.google.com/drive/folders/1582BeZRtU19YGFgEYcqKkPSwTDtrya3m?usp=drive_link",
+            "รพ.สต.ทับคาง": "https://drive.google.com/drive/folders/1DOHgyGdMbjtBAxAbvAyAXDabOSSqtVxm",
+            "รพ.สต.แหลมผักเบี้ย": "https://drive.google.com/drive/folders/1mdpN2ed8-HbgMeZaFamq4PrR0BPrbi5R",
+            "รพ.สต.บ้านบางสามแพรก": "https://drive.google.com/drive/folders/1KbctCEYAA27GUWsAtEFSWCTy8xhIEIuc",
+            "รพ.สต.บางขุนไทร": "https://drive.google.com/drive/folders/131AYSSlD2NoEgG9ZcDU96CVBD8eg1mda",
+            "รพ.สต.บางตะบูน": "https://drive.google.com/drive/folders/1vMCUb1ZC2OFnJhTytS_QH8OdKjYXxs43",
+            "รพ.สต.บ้านพุุม่วง": "https://drive.google.com/drive/folders/1pI_AdDJ7bPs5p9uMuUvFdaQkpDCvPEvm",
+            "รพ.สต.วัดเขาตะเครา": "https://drive.google.com/drive/folders/1mee2_eAMz-3lqus9pyh05LTOi0WqLJmY",
+            "รพ.สต.นิคมฯ": "https://drive.google.com/drive/folders/1tHYPubSaTohj0vUUd3wp376EQgbcYqsm",
+            "รพ.สต.บางครก": "https://drive.google.com/drive/folders/122t4LWTWaXcmktFUxEC6KzovkV6fTtN0",     
+            "รพ.สต.บางตะบูนออก": "https://drive.google.com/drive/folders/1AXtLUZc1oARVR7ilHh5B42uJV1e5INoC",      
+            "รพ.สต.บ้านบางหอ": "https://drive.google.com/drive/folders/1X-uhXLbTe4tSg9Tn3T7oBuNpPqrVL65C",      
+            "รพ.สต.ปากทะเล": "https://drive.google.com/drive/folders/1aaMaShTuCFTL6L53u8QhHlJv9KnLW3k3",      
+            "ศบส.เทศบาลเมืองชะอำ": "https://drive.google.com/drive/folders/1epsE6orsABbvOW-IDxjqveMu3ozDPwK-",                 
+            "หนองหญ้าปล้อง": "https://drive.google.com/drive/folders/18aKfqkAbadF2ul_JXpYAOrVVAriLbmNj",
+            "เขาย้อย": "https://drive.google.com/drive/folders/14E4-xPVR7-8VggywFLbK8KSzecHDecTK",
+            "ชะอำ": "https://drive.google.com/drive/folders/1EQXvjeGYlI4IWFFXBozeaJbZfr-sV88h",
+            "แก่งกระจาน": "https://drive.google.com/drive/folders/1gofqZngF2hGWNIyiIC31t2R2CveLVpdZ",
+            "บ้านแหลม": "https://drive.google.com/drive/folders/1UG9jZt10DgdgY-ToVKUNT1-ydfS403oN",
+            "ท่ายาง": "https://drive.google.com/drive/folders/1fDGPmMIKkhymEPBpcbPbxAvAT0qFbvdg",
+            "สสอ.บ้านแหลม": "https://drive.google.com/drive/folders/1h3WMO-NE-4Oa_WiKQmVrS7kvv47jisA9",     
+            "สสอ.ท่ายาง": "https://drive.google.com/drive/folders/1sQkCSe3ePJsgj_UwxarCWAaQ8tRZZj48",         
         };
 
-        let chartInstances = {};
-
-        // View Switch Logic
         function switchView(view) {
-            if (currentView === view) return;
             currentView = view;
             
-            // Update Buttons
             document.getElementById('btn-hospital').className = `view-btn ${view === 'hospital' ? 'active' : 'inactive'}`;
+            document.getElementById('btn-main-hospital').className = `view-btn ${view === 'main-hospital' ? 'active' : 'inactive'}`;
             document.getElementById('btn-district').className = `view-btn ${view === 'district' ? 'active' : 'inactive'}`;
             
-            // Update Labels
-            const title = view === 'hospital' ? 'ข้อมูลรายหน่วยงาน (เรียงจากยอดตรวจสูงสุด)' : 'ข้อมูลรายอำเภอ (เรียงจากยอดตรวจสูงสุด)';
-            const thName = view === 'hospital' ? 'หน่วยงาน' : 'อำเภอ';
-            const chartTitle = view === 'hospital' ? 'เปรียบเทียบผลตรวจแยกตามหน่วยงาน' : 'เปรียบเทียบผลตรวจแยกตามอำเภอ';
+            let title = 'ข้อมูลรายหน่วยงานหลัก (เรียงจากยอดตรวจสูงสุด)';
+            let thName = 'หน่วยงานหลัก';
+            let chartTitle = 'เปรียบเทียบผลตรวจแยกตามหน่วยงานหลัก';
+            
+            if (view === 'hospital') {
+                title = 'ข้อมูลรายหน่วยงานย่อย (เรียงจากยอดตรวจสูงสุด)';
+                thName = 'หน่วยงานย่อย';
+                chartTitle = 'เปรียบเทียบผลตรวจแยกตามหน่วยงานย่อย';
+            } else if (view === 'district') {
+                title = 'ข้อมูลรายอำเภอ (เรียงจากยอดตรวจสูงสุด)';
+                thName = 'อำเภอ';
+                chartTitle = 'เปรียบเทียบผลตรวจแยกตามอำเภอ';
+            }
             
             document.getElementById('tableTitle').innerText = title;
             document.getElementById('th-name').innerText = thName;
@@ -215,9 +246,11 @@
         }
 
         async function fetchData() {
-            const gid = currentView === 'hospital' ? GID_HOSPITAL : GID_DISTRICT;
+            let gid = GID_MAIN_HOSPITAL;
+            if (currentView === 'hospital') gid = GID_HOSPITAL;
+            if (currentView === 'district') gid = GID_DISTRICT;
+
             const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
-            
             document.getElementById('loading-overlay').classList.remove('hidden');
 
             try {
@@ -236,21 +269,13 @@
         }
 
         function processData(dataRows) {
-            let stats = {
-                neg: 0, pos16: 0, pos18: 0, posOther: 0, invalid: 0, lbc: 0,
-                hospitals: [] 
-            };
-
-            let totals = {
-                s16: 0, s18: 0, sOther: 0, sNeg: 0,
-                c16: 0, c18: 0, cOther: 0, cNeg: 0,
-                lbc: 0, grand: 0
-            };
+            let stats = { neg: 0, pos16: 0, pos18: 0, posOther: 0, invalid: 0, lbc: 0, hospitals: [] };
+            let totals = { s16: 0, s18: 0, sOther: 0, sNeg: 0, c16: 0, c18: 0, cOther: 0, cNeg: 0, lbc: 0, grand: 0 };
 
             const tableBody = document.getElementById('data-table-body');
             tableBody.innerHTML = '';
 
-            let hospitalList = [];
+            let dataList = [];
 
             dataRows.forEach(row => {
                 const name = row[0];
@@ -261,21 +286,16 @@
                 const sOther = parseNum(row[3]);
                 const sNeg = parseNum(row[4]);
                 const sInv = parseNum(row[5]);
-
                 const c16 = parseNum(row[7]);
                 const c18 = parseNum(row[8]);
                 const cOther = parseNum(row[9]);
                 const cNeg = parseNum(row[10]);
                 const cInv = parseNum(row[11]);
-
                 const lbc = parseNum(row[13]);
 
-                const totalInHospital = (s16+s18+sOther+sNeg+sInv) + (c16+c18+cOther+cNeg+cInv) + lbc;
+                const totalInRow = (s16+s18+sOther+sNeg+sInv) + (c16+c18+cOther+cNeg+cInv) + lbc;
 
-                hospitalList.push({
-                    name, s16, s18, sOther, sNeg, sInv, c16, c18, cOther, cNeg, cInv, lbc,
-                    total: totalInHospital
-                });
+                dataList.push({ name, s16, s18, sOther, sNeg, sInv, c16, c18, cOther, cNeg, cInv, lbc, total: totalInRow });
 
                 stats.neg += (sNeg + cNeg);
                 stats.pos16 += (s16 + c16);
@@ -286,54 +306,40 @@
 
                 totals.s16 += s16; totals.s18 += s18; totals.sOther += sOther; totals.sNeg += sNeg;
                 totals.c16 += c16; totals.c18 += c18; totals.cOther += cOther; totals.cNeg += cNeg;
-                totals.lbc += lbc; totals.grand += totalInHospital;
+                totals.lbc += lbc; totals.grand += totalInRow;
             });
 
-            hospitalList.sort((a, b) => b.total - a.total);
+            dataList.sort((a, b) => b.total - a.total);
 
-            hospitalList.forEach(h => {
-                stats.hospitals.push({
-                    name: h.name,
-                    n16: h.s16 + h.c16,
-                    n18: h.s18 + h.c18,
-                    nOther: h.sOther + h.cOther,
-                    nNeg: h.sNeg + h.cNeg
-                });
-
+            dataList.forEach(item => {
+                stats.hospitals.push({ name: item.name, n16: item.s16 + item.c16, n18: item.s18 + item.c18, nOther: item.sOther + item.cOther, nNeg: item.sNeg + item.cNeg });
+                
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50 transition-colors";
-
-                const link = hospitalLinks[h.name];
-                const linkHtml = (currentView === 'hospital' && link) ? 
-                    `<a href="${link}" target="_blank" class="link-icon" title="เปิด Google Drive ของ ${h.name}">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-                        </svg>
-                    </a>` : '';
+                
+                // ค้นหาลิงก์จากรายการลิงก์กลาง
+                const link = hospitalLinks[item.name];
+                const linkHtml = link ? `<a href="${link}" target="_blank" class="link-icon" title="เปิด Google Drive"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></a>` : '';
 
                 tr.innerHTML = `
-                    <td class="px-6 py-3 font-medium border-r bg-slate-50/20 sticky left-0 z-10 flex items-center justify-between">
-                        <span>${h.name}</span>
-                        ${linkHtml}
-                    </td>
-                    <td class="text-right px-4 border-r text-rose-600 font-bold">${h.s16 || '-'}</td>
-                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${h.s18 || '-'}</td>
-                    <td class="text-right px-4 border-r text-orange-500">${h.sOther || '-'}</td>
-                    <td class="text-right px-4 border-r text-emerald-600">${h.sNeg || '-'}</td>
-                    <td class="text-right px-4 border-r text-rose-600 font-bold">${h.c16 || '-'}</td>
-                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${h.c18 || '-'}</td>
-                    <td class="text-right px-4 border-r text-orange-500">${h.cOther || '-'}</td>
-                    <td class="text-right px-4 border-r text-emerald-600">${h.cNeg || '-'}</td>
-                    <td class="text-right px-4 font-bold border-r">${h.lbc || '-'}</td>
-                    <td class="text-right px-4 font-bold bg-slate-50/40">${h.total.toLocaleString()}</td>
+                    <td class="px-6 py-3 font-medium text-left sticky-col z-10 flex items-center justify-between"><span>${item.name}</span>${linkHtml}</td>
+                    <td class="text-right px-4 border-r text-rose-600 font-bold">${item.s16 || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${item.s18 || '-'}</td>
+                    <td class="text-right px-4 border-r text-orange-500">${item.sOther || '-'}</td>
+                    <td class="text-right px-4 border-r text-emerald-600">${item.sNeg || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-600 font-bold">${item.c16 || '-'}</td>
+                    <td class="text-right px-4 border-r text-rose-500 font-semibold">${item.c18 || '-'}</td>
+                    <td class="text-right px-4 border-r text-orange-500">${item.cOther || '-'}</td>
+                    <td class="text-right px-4 border-r text-emerald-600">${item.cNeg || '-'}</td>
+                    <td class="text-right px-4 font-bold border-r">${item.lbc || '-'}</td>
+                    <td class="text-right px-4 font-bold bg-slate-50/40">${item.total.toLocaleString()}</td>
                 `;
                 tableBody.appendChild(tr);
             });
 
-            const tableFoot = document.getElementById('data-table-foot');
-            tableFoot.innerHTML = `
+            document.getElementById('data-table-foot').innerHTML = `
                 <tr class="bg-slate-100">
-                    <td class="px-6 py-4 border-r sticky left-0 bg-slate-100 z-10">รวมทั้งหมด</td>
+                    <td class="px-6 py-4 sticky-col z-10 text-left">รวมทั้งหมด</td>
                     <td class="text-right px-4 border-r">${totals.s16.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.s18.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.sOther.toLocaleString()}</td>
@@ -343,18 +349,16 @@
                     <td class="text-right px-4 border-r">${totals.cOther.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.cNeg.toLocaleString()}</td>
                     <td class="text-right px-4 border-r">${totals.lbc.toLocaleString()}</td>
-                    <td class="text-right px-4 text-indigo-900 bg-indigo-50">${totals.grand.toLocaleString()}</td>
+                    <td class="text-right px-4 text-indigo-900 bg-indigo-50 font-black">${totals.grand.toLocaleString()}</td>
                 </tr>
             `;
 
             const totalPositive = stats.pos16 + stats.pos18 + stats.posOther;
             const totalTests = stats.neg + totalPositive + stats.invalid + stats.lbc;
-
             document.getElementById('total-screened').innerText = totalTests.toLocaleString();
             document.getElementById('total-pos').innerText = totalPositive.toLocaleString();
             document.getElementById('total-neg').innerText = stats.neg.toLocaleString();
             document.getElementById('total-invalid').innerText = stats.invalid.toLocaleString();
-            
             const getRate = (v) => ((v/totalTests)*100 || 0).toFixed(1) + '%';
             document.getElementById('pos-percent').innerText = getRate(totalPositive);
             document.getElementById('neg-percent').innerText = getRate(stats.neg);
@@ -362,10 +366,7 @@
             renderCharts(stats);
         }
 
-        function parseNum(v) {
-            if (!v) return 0;
-            return parseInt(v.replace(/,/g, '')) || 0;
-        }
+        function parseNum(v) { return v ? (parseInt(v.replace(/,/g, '')) || 0) : 0; }
 
         function renderCharts(s) {
             if (chartInstances.pie) chartInstances.pie.destroy();
@@ -373,31 +374,17 @@
                 type: 'doughnut',
                 data: {
                     labels: ['Negative', 'HPV 16', 'HPV 18', 'Other HR', 'Invalid', 'LBC'],
-                    datasets: [{
-                        data: [s.neg, s.pos16, s.pos18, s.posOther, s.invalid, s.lbc],
-                        backgroundColor: ['#10b981', '#e11d48', '#fb7185', '#fb923c', '#94a3b8', '#818cf8'],
-                        borderWidth: 0
-                    }]
+                    datasets: [{ data: [s.neg, s.pos16, s.pos18, s.posOther, s.invalid, s.lbc], backgroundColor: ['#10b981', '#e11d48', '#fb7185', '#fb923c', '#94a3b8', '#818cf8'], borderWidth: 0 }]
                 },
-                options: { 
-                    maintainAspectRatio: false, 
-                    cutout: '70%',
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { usePointStyle: true, padding: 15, font: { size: 11 } } 
-                        } 
-                    } 
-                }
+                options: { maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, font: { size: 11 } } } } }
             });
 
             if (chartInstances.bar) chartInstances.bar.destroy();
             const chartData = s.hospitals.slice(0, 15); 
-
             chartInstances.bar = new Chart(document.getElementById('hospitalBarChart'), {
                 type: 'bar',
                 data: {
-                    labels: chartData.map(h => h.name.length > 15 ? h.name.substring(0,12)+'...' : h.name),
+                    labels: chartData.map(h => h.name.length > 12 ? h.name.substring(0,10)+'...' : h.name),
                     datasets: [
                         { label: 'HPV 16', data: chartData.map(h => h.n16), backgroundColor: '#e11d48' },
                         { label: 'HPV 18', data: chartData.map(h => h.n18), backgroundColor: '#fb7185' },
@@ -408,14 +395,8 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { 
-                        x: { stacked: true, grid: { display: false } }, 
-                        y: { stacked: true, grid: { color: '#f1f5f9' } } 
-                    },
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { usePointStyle: true } },
-                        tooltip: { mode: 'index', intersect: false }
-                    }
+                    scales: { x: { stacked: true }, y: { stacked: true } },
+                    plugins: { legend: { position: 'bottom' } }
                 }
             });
         }
@@ -428,7 +409,6 @@
         });
 
         window.onload = fetchData;
-        setInterval(fetchData, 60000);
     </script>
 </body>
 </html>
