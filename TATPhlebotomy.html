@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phlebotomy TAT Analytics | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Kanit:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #f97316;
+            --bg-slate: #f1f5f9;
+            --glass: rgba(255, 255, 255, 0.7);
+        }
+
+        body {
+            font-family: 'Kanit', 'Outfit', sans-serif;
+            background-color: #f8fafc;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(249, 115, 22, 0.05) 0px, transparent 50%);
+            min-height: 100vh;
+            color: #1e293b;
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+            border-radius: 1.5rem;
+        }
+
+        /* Dropdown Styles */
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .filter-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 220px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            z-index: 50;
+            border-radius: 1rem;
+            border: 1px solid #f1f5f9;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .filter-dropdown.active .filter-content {
+            display: block;
+        }
+
+        .filter-btn {
+            width: 100%;
+            text-align: left;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 1rem;
+            border-radius: 0.85rem;
+            font-size: 0.875rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary-light);
+            background-color: #f8fafc;
+        }
+
+        /* Range Slider Styles */
+        .range-container {
+            position: relative;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            margin: 20px 10px 10px 10px;
+        }
+
+        .range-selected {
+            height: 100%;
+            background: var(--primary);
+            position: absolute;
+            border-radius: 3px;
+        }
+
+        .range-input {
+            position: absolute;
+            width: 100%;
+            height: 6px;
+            top: 0;
+            left: 0;
+            background: none;
+            pointer-events: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--primary);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            pointer-events: auto;
+            -webkit-appearance: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .range-input::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Loader */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Custom Checkbox */
+        input[type="checkbox"] {
+            width: 1.1rem;
+            height: 1.1rem;
+            border-radius: 0.35rem;
+            border: 1.5px solid #cbd5e1;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        input[type="checkbox"]:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 0.8rem;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Sidebar Styles */
+        #filter-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 380px;
+            max-width: 85vw;
+            z-index: 1001;
+            background: white;
+            box-shadow: 20px 0 50px rgba(0, 0, 0, 0.05);
+            transform: translateX(-100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        #filter-sidebar.open {
+            transform: translateX(0);
+        }
+
+        .filter-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.2);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+
+        .filter-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .fab-button {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 900;
+            width: 56px;
+            height: 56px;
+            border-radius: 50% 50% 12px 50%;
+            background: #1e293b;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border: none;
+        }
+
+        .fab-button:hover {
+            transform: scale(1.1) rotate(10deg);
+            background: #0f172a;
+        }
+    </style>
+</head>
+
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
+                    <i class="fas fa-microscope text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-bold font-outfit tracking-tight text-slate-900">Phlebotomy TAT <span
+                            class="text-indigo-600">Analytics</span></h1>
+                    <p class="text-slate-500 font-medium text-sm flex items-center gap-2">
+                        <i class="fas fa-chart-line text-xs"></i>
+                        สรุปข้อมูลระยะเวลารอคอย ห้องเจาะเลือด
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()"
+                    class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2 uppercase tracking-wider">
+                    <i class="fas fa-sliders-h"></i> Filters
+                </button>
+                <div class="flex flex-col items-end">
+                    <div id="row-count"
+                        class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-right">
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filter Sidebar -->
+        <div id="filter-overlay" class="filter-overlay" onclick="toggleSidebar()"></div>
+        <aside id="filter-sidebar" class="p-8 space-y-8">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <i class="fas fa-filter"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-slate-800">ตัวกรองข้อมูล</h2>
+                </div>
+                <button onclick="toggleSidebar()"
+                    class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="space-y-8">
+                <!-- Time Range Slider -->
+                <div class="flex flex-col gap-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+                    <div class="flex justify-between items-center">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">ช่วงเวลากราฟ</label>
+                        <span id="time-range-display"
+                            class="text-xs font-bold text-indigo-600 bg-white px-3 py-1 rounded-lg border border-indigo-100 shadow-sm font-outfit">00:00
+                            - 24:00</span>
+                    </div>
+                    <div class="range-container">
+                        <div class="range-selected" id="range-selected"></div>
+                        <input type="range" min="0" max="48" value="0" class="range-input" id="min-time">
+                        <input type="range" min="0" max="48" value="48" class="range-input" id="max-time">
+                    </div>
+                    <p class="text-[10px] text-slate-400 text-center italic">เลื่อนเพื่อ Zoom กราฟเฉพาะช่วงเวลา</p>
+                </div>
+
+                <!-- Dropdown Filters -->
+                <div class="space-y-6">
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">เวลา &
+                            วัน</label>
+                        <div class="filter-dropdown" id="group-year">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-year')">
+                                <span>ปี: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-year"></div>
+                        </div>
+                        <div class="filter-dropdown" id="group-month">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-month')">
+                                <span>เดือน: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-month"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">หมวดหมู่ข้อมูล</label>
+                        <div class="filter-dropdown" id="group-queue">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-queue')">
+                                <span>คิว: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-queue"></div>
+                        </div>
+                        <div class="filter-dropdown" id="group-daytype">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-daytype')">
+                                <span>วันทำงาน: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-daytype"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">วันในสัปดาห์</label>
+                        <div class="filter-dropdown" id="group-dow">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-dow')">
+                                <span>วัน: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-dow"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="resetFilters()"
+                    class="w-full py-4 bg-slate-900 text-white rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+                    <i class="fas fa-undo mr-2"></i> Reset All Filters
+                </button>
+            </div>
+        </aside>
+
+        <!-- Floating Action Button -->
+        <button onclick="toggleSidebar()" class="fab-button" title="Open Filters">
+            <i class="fas fa-sliders-h text-xl"></i>
+        </button>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div
+                    class="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                    <i class="fas fa-users text-7xl text-indigo-600"></i>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">ผู้รับบริการรวม</p>
+                <div class="flex items-baseline gap-2">
+                    <h2 id="total-patients" class="text-4xl font-bold text-slate-800 font-outfit">0</h2>
+                    <span class="text-xs font-bold text-slate-400 uppercase">ราย</span>
+                </div>
+                <div class="mt-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Service Volume</span>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div
+                    class="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                    <i class="fas fa-clock text-7xl text-orange-500"></i>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">TAT เฉลี่ย</p>
+                <div class="flex items-baseline gap-2">
+                    <h2 id="avg-tat" class="text-4xl font-bold text-indigo-600 font-outfit">0.00</h2>
+                    <span class="text-xs font-bold text-slate-400 uppercase">นาที</span>
+                </div>
+                <div class="mt-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Turnaround Performance</span>
+                </div>
+            </div>
+
+            <div class="glass-card p-6 relative overflow-hidden group">
+                <div
+                    class="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-500">
+                    <i class="fas fa-fire text-7xl text-rose-500"></i>
+                </div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Peak Activity Period</p>
+                <h2 id="peak-period" class="text-lg font-bold text-slate-800 mt-1 truncate">-</h2>
+                <div class="mt-4 flex items-center gap-2">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Maximum Load</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="glass-card p-8 border border-white/50">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Operational Pulse</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">ปริมาณงานและประสิทธิภาพราย
+                        30 นาที</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="toggle-ds-0" onclick="toggleDataset(0)"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white transition-all hover:bg-slate-50 shadow-sm active:scale-95">
+                        <span class="w-3 h-3 rounded bg-indigo-500"></span>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Volume</span>
+                    </button>
+                    <button id="toggle-ds-1" onclick="toggleDataset(1)"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white transition-all hover:bg-slate-50 shadow-sm active:scale-95">
+                        <span class="w-3 h-1 bg-orange-500 rounded-full"></span>
+                        <span class="text-[10px] font-bold text-slate-500 uppercase">Avg TAT</span>
+                    </button>
+                </div>
+            </div>
+            <div class="relative h-[480px]">
+                <canvas id="dualChart"></canvas>
+            </div>
+        </div>
+
+        <!-- New: Monthly Volume Trend (Ignores Filters) -->
+        <div class="glass-card p-8 border border-white/50">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Monthly Patient Volume Trend</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        ปริมาณผู้รับบริการรวมรายเดือน (ตามเงื่อนไขที่เลือก)</p>
+                </div>
+                <div id="monthly-legend" class="flex flex-wrap items-center gap-3">
+                    <!-- Dynamic Year Buttons injected here -->
+                </div>
+            </div>
+            <div class="relative h-[300px]">
+                <canvas id="monthlyTrendChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay"
+        class="fixed inset-0 bg-slate-900/10 backdrop-blur-md z-50 flex items-center justify-center">
+        <div class="glass-card p-10 flex flex-col items-center gap-4">
+            <div class="loader"></div>
+            <div class="text-center">
+                <p class="text-slate-800 font-bold uppercase tracking-widest text-sm">Processing Intelligence</p>
+                <p class="text-slate-400 text-[10px] font-bold">กำลังประมวลผลข้อมูลจากระบบ...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT6meVTDCOHm-xFBduTbD3UkhhRVVXQSr7RD2-nExN87rl9jqPt6TbCLvzpHUFEptu_qu5vda3RZXXc/pub?output=csv';
+        let charts = {};
+        let rawData = [];
+        let selections = {
+            year: new Set(), month: new Set(), queue: new Set(), dow: new Set(), daytype: new Set()
+        };
+
+        let rangeTime = { min: 0, max: 48 };
+
+        const masterPeriods = (function () {
+            const periods = [];
+            for (let hour = 0; hour < 24; hour++) {
+                const h = hour.toString().padStart(2, '0');
+                const nextH = (hour + 1).toString().padStart(2, '0');
+                periods.push({ full: `${h}:01-${h}:30`, short: `${h}:00`, index: hour * 2 });
+                periods.push({ full: `${h}:31-${nextH}:00`, short: `${h}:30`, index: hour * 2 + 1 });
+            }
+            return periods;
+        })();
+
+        function indexToTimeStr(idx) {
+            const hour = Math.floor(idx / 2).toString().padStart(2, '0');
+            const min = (idx % 2 === 0) ? '00' : '30';
+            return `${hour}:${min}`;
+        }
+
+        // Sidebar Toggle Logic
+        function toggleSidebar() {
+            const sidebar = document.getElementById('filter-sidebar');
+            const overlay = document.getElementById('filter-overlay');
+            const isOpen = sidebar.classList.contains('open');
+
+            if (isOpen) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('show');
+                document.body.style.overflow = '';
+                // Close all dropdowns when sidebar closes
+                closeAllDropdowns();
+            } else {
+                sidebar.classList.add('open');
+                overlay.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        // Dropdown Click Logic
+        function toggleDropdown(event, id) {
+            event.stopPropagation();
+            const target = document.getElementById(id);
+            const wasActive = target.classList.contains('active');
+
+            closeAllDropdowns();
+
+            if (!wasActive) {
+                target.classList.add('active');
+            }
+        }
+
+        function closeAllDropdowns() {
+            document.querySelectorAll('.filter-dropdown').forEach(d => {
+                d.classList.remove('active');
+            });
+        }
+
+        // Close dropdowns when clicking outside
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.filter-content')) {
+                closeAllDropdowns();
+            }
+        });
+
+        const minInput = document.getElementById('min-time');
+        const maxInput = document.getElementById('max-time');
+        const rangeSelected = document.getElementById('range-selected');
+        const rangeDisplay = document.getElementById('time-range-display');
+
+        function updateSliderUI() {
+            let minVal = parseInt(minInput.value);
+            let maxVal = parseInt(maxInput.value);
+            if (minVal > maxVal) [minVal, maxVal] = [maxVal, minVal];
+
+            rangeTime.min = minVal;
+            rangeTime.max = maxVal;
+
+            const left = (minVal / 48) * 100;
+            const width = ((maxVal - minVal) / 48) * 100;
+
+            rangeSelected.style.left = left + "%";
+            rangeSelected.style.width = width + "%";
+            rangeDisplay.innerText = `${indexToTimeStr(minVal)} - ${indexToTimeStr(maxVal)}`;
+
+            if (rawData.length > 0) processAndRender(rawData);
+        }
+
+        [minInput, maxInput].forEach(input => {
+            input.addEventListener('input', updateSliderUI);
+        });
+
+        async function fetchData() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            try {
+                const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
+                const csvData = await response.text();
+                rawData = parseCSV(csvData);
+                populateFilters(rawData);
+                processAndRender(rawData);
+                renderMonthlyTrend(rawData); // New: Initial render for static chart
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setTimeout(() => {
+                    document.getElementById('loading-overlay').style.opacity = '0';
+                    setTimeout(() => document.getElementById('loading-overlay').style.display = 'none', 300);
+                }, 500);
+            }
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            return lines.slice(1).map(line => {
+                const parts = [];
+                let inQuoted = false;
+                let current = '';
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') inQuoted = !inQuoted;
+                    else if (char === ',' && !inQuoted) {
+                        parts.push(current.trim());
+                        current = '';
+                    } else current += char;
+                }
+                parts.push(current.trim());
+                return parts;
+            });
+        }
+
+        function populateFilters(data) {
+            const configs = [
+                { id: 'year', index: 0, label: 'ปี' },
+                { id: 'month', index: 1, label: 'เดือน' },
+                { id: 'queue', index: 2, label: 'คิว' },
+                { id: 'dow', index: 4, label: 'วัน' },
+                { id: 'daytype', index: 5, label: 'ประเภทวัน' }
+            ];
+
+            configs.forEach(cfg => {
+                const container = document.getElementById(`content-${cfg.id}`);
+                const uniqueValues = [...new Set(data.map(row => row[cfg.index]))].filter(v => v).sort();
+
+                container.innerHTML = '';
+                uniqueValues.forEach(val => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center gap-3 p-2.5 hover:bg-slate-50 cursor-pointer text-sm text-slate-600 rounded-lg transition-colors font-medium";
+                    label.innerHTML = `<input type="checkbox" value="${val}" ${selections[cfg.id].has(val) ? 'checked' : ''} onchange="toggleSelection('${cfg.id}', '${val}')"> <span>${val}</span>`;
+                    container.appendChild(label);
+                });
+                updateButtonText(cfg.id, cfg.label);
+            });
+        }
+
+        function toggleSelection(type, value) {
+            selections[type].has(value) ? selections[type].delete(value) : selections[type].add(value);
+            const labelMap = { year: 'ปี', month: 'เดือน', queue: 'คิว', dow: 'วัน', daytype: 'ประเภทวัน' };
+            updateButtonText(type, labelMap[type]);
+            processAndRender(rawData);
+        }
+
+        function updateButtonText(type, label) {
+            const btnSpan = document.querySelector(`#group-${type} .filter-btn span`);
+            const count = selections[type].size;
+            btnSpan.innerText = count === 0 ? `${label}: ทั้งหมด` : (count === 1 ? Array.from(selections[type])[0] : `${label}: เลือก ${count}`);
+        }
+
+        function resetFilters() {
+            Object.keys(selections).forEach(k => selections[k].clear());
+            document.querySelectorAll('input[type="checkbox"]').forEach(i => i.checked = false);
+            minInput.value = 0;
+            maxInput.value = 48;
+            updateSliderUI();
+            const labelMap = { year: 'ปี', month: 'เดือน', queue: 'คิว', dow: 'วัน', daytype: 'ประเภทวัน' };
+            Object.keys(selections).forEach(k => updateButtonText(k, labelMap[k]));
+            processAndRender(rawData);
+        }
+
+        function normalizePeriod(text) {
+            if (!text) return '';
+            return text.replace(/\s+/g, '').replace(/\./g, ':').replace(/[^\d:-]/g, '');
+        }
+
+        function processAndRender(data) {
+            const filteredData = data.filter(row => {
+                return (selections.year.size === 0 || selections.year.has(row[0])) &&
+                    (selections.month.size === 0 || selections.month.has(row[1])) &&
+                    (selections.queue.size === 0 || selections.queue.has(row[2])) &&
+                    (selections.dow.size === 0 || selections.dow.has(row[4])) &&
+                    (selections.daytype.size === 0 || selections.daytype.has(row[5]));
+            });
+
+            const periodDataMap = {};
+            const activeRange = masterPeriods.filter(p => p.index >= rangeTime.min && p.index < rangeTime.max);
+
+            activeRange.forEach(p => {
+                periodDataMap[normalizePeriod(p.full)] = {
+                    displayLabel: p.short, fullLabel: p.full, count: 0, tatSum: 0, tatCount: 0, index: p.index
+                };
+            });
+
+            let totalPatients = 0;
+            let totalTatWeight = 0;
+
+            filteredData.forEach((row) => {
+                const rawP = normalizePeriod(row[3]);
+                const tatAvg = parseFloat(row[6]) || 0;
+                const count = parseInt(row[7]) || 0;
+
+                let target = periodDataMap[rawP];
+                if (!target) {
+                    for (let key in periodDataMap) {
+                        if (key.includes(rawP) || rawP.includes(key)) { target = periodDataMap[key]; break; }
+                    }
+                }
+
+                if (target) {
+                    target.count += count;
+                    totalPatients += count;
+                    if (tatAvg > 0) {
+                        target.tatSum += (tatAvg * count);
+                        target.tatCount += count;
+                        totalTatWeight += (tatAvg * count);
+                    }
+                }
+            });
+
+            const periodEntries = Object.values(periodDataMap).sort((a, b) => a.index - b.index);
+            const peak = periodEntries.reduce((a, b) => (a.count > b.count ? a : b), { fullLabel: '-', count: 0 });
+
+            document.getElementById('total-patients').innerText = totalPatients.toLocaleString();
+            document.getElementById('avg-tat').innerText = totalPatients > 0 ? (totalTatWeight / totalPatients).toFixed(2) : '0.00';
+            document.getElementById('peak-period').innerText = peak.count > 0 ? peak.fullLabel : 'ไม่มีข้อมูลในที่เลือก';
+            document.getElementById('row-count').innerText = `DATA FOCUS: ${indexToTimeStr(rangeTime.min)} - ${indexToTimeStr(rangeTime.max)}`;
+
+            renderDualChart(periodEntries);
+            renderMonthlyTrend(filteredData);
+        }
+
+        function toggleDataset(index) {
+            if (!charts.main) return;
+            const isVisible = charts.main.isDatasetVisible(index);
+            charts.main.setDatasetVisibility(index, !isVisible);
+            charts.main.update();
+
+            // UI Feedback
+            const btn = document.getElementById(`toggle-ds-${index}`);
+            if (!isVisible) {
+                btn.classList.remove('opacity-40', 'bg-slate-100', 'grayscale');
+                btn.classList.add('bg-white');
+            } else {
+                btn.classList.add('opacity-40', 'bg-slate-100', 'grayscale');
+                btn.classList.remove('bg-white');
+            }
+        }
+
+        function renderDualChart(periodEntries) {
+            const ctx = document.getElementById('dualChart').getContext('2d');
+
+            // Store previous visibility states before destroying
+            const prevVisibility = charts.main ? [
+                charts.main.isDatasetVisible(0),
+                charts.main.isDatasetVisible(1)
+            ] : [true, true];
+
+            if (charts.main) charts.main.destroy();
+
+            charts.main = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: periodEntries.map(e => e.displayLabel),
+                    datasets: [
+                        {
+                            label: 'จำนวนคน (คน)',
+                            data: periodEntries.map(e => e.count),
+                            backgroundColor: 'rgba(79, 70, 229, 0.7)',
+                            hoverBackgroundColor: 'rgba(79, 70, 229, 0.9)',
+                            borderRadius: 6,
+                            borderWidth: 0,
+                            yAxisID: 'y',
+                            hidden: !prevVisibility[0]
+                        },
+                        {
+                            label: 'TAT เฉลี่ย (นาที)',
+                            data: periodEntries.map(e => e.tatCount > 0 ? (e.tatSum / e.tatCount).toFixed(2) : 0),
+                            type: 'line',
+                            borderColor: '#f97316',
+                            borderWidth: 3,
+                            fill: false,
+                            yAxisID: 'y1',
+                            tension: 0.3,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#f97316',
+                            hidden: !prevVisibility[1]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 600, easing: 'easeOutQuart' },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            titleFont: { family: 'Outfit', size: 14, weight: 'bold' },
+                            bodyFont: { family: 'Kanit', size: 12 },
+                            cornerRadius: 12,
+                            callbacks: {
+                                title: (items) => periodEntries[items[0].dataIndex].fullLabel
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                font: { family: 'Outfit', size: 10 },
+                                autoSkip: true,
+                                maxRotation: 0,
+                                callback: function (val, index) {
+                                    const label = this.getLabelForValue(val);
+                                    if (periodEntries.length > 20) return label.endsWith(':00') ? label : '';
+                                    return label;
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(226, 232, 240, 0.5)', drawBorder: false },
+                            ticks: { font: { family: 'Outfit', size: 10 } }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            max: 60,
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: { font: { family: 'Outfit', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function toggleYearDataset(index) {
+            if (!charts.monthly) return;
+            const isVisible = charts.monthly.isDatasetVisible(index);
+            charts.monthly.setDatasetVisibility(index, !isVisible);
+            charts.monthly.update();
+
+            const btn = document.getElementById(`toggle-year-${index}`);
+            if (!isVisible) {
+                btn.classList.remove('opacity-40', 'grayscale');
+            } else {
+                btn.classList.add('opacity-40', 'grayscale');
+            }
+        }
+
+        function renderMonthlyTrend(allData) {
+            const monthOrder = [
+                'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+            ];
+
+            const yearMap = {};
+            const monthTotalSums = new Array(12).fill(0);
+
+            allData.forEach(row => {
+                const year = row[0];
+                const month = row[1];
+                const count = parseInt(row[7]) || 0;
+                if (!year || !month) return;
+
+                if (!yearMap[year]) {
+                    yearMap[year] = new Array(12).fill(0);
+                }
+                const mIndex = monthOrder.indexOf(month);
+                if (mIndex !== -1) {
+                    yearMap[year][mIndex] += count;
+                    monthTotalSums[mIndex] += count;
+                }
+            });
+
+            // Find indices of months that have at least some data in any year
+            const activeMonthIndices = [];
+            monthTotalSums.forEach((sum, idx) => {
+                if (sum > 0) activeMonthIndices.push(idx);
+            });
+
+            const activeMonthLabels = activeMonthIndices.map(i => monthOrder[i]);
+
+            const years = Object.keys(yearMap).sort();
+            const yearColors = {
+                '2567': '#10b981', // Emerald
+                '2568': '#8b5cf6', // Violet
+                '2569': '#f43f5e', // Rose
+                '2570': '#f59e0b', // Amber
+                'default': '#64748b' // Slate
+            };
+
+            const datasets = years.map((year, idx) => {
+                const color = yearColors[year] || yearColors.default;
+                // Only take data for the months we are actually showing
+                const filteredData = activeMonthIndices.map(mIdx => yearMap[year][mIdx]);
+
+                return {
+                    label: `ปี ${year}`,
+                    data: filteredData,
+                    borderColor: color,
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: color,
+                    hidden: false
+                };
+            });
+
+            // Re-render legend
+            const legendContainer = document.getElementById('monthly-legend');
+            legendContainer.innerHTML = '';
+            years.forEach((year, idx) => {
+                const color = yearColors[year] || yearColors.default;
+                const btn = document.createElement('button');
+                btn.id = `toggle-year-${idx}`;
+                btn.onclick = () => toggleYearDataset(idx);
+                btn.className = "flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-white transition-all hover:bg-slate-50 shadow-sm active:scale-95";
+                btn.innerHTML = `
+                    <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">${year}</span>
+                `;
+                legendContainer.appendChild(btn);
+            });
+
+            const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+            if (charts.monthly) charts.monthly.destroy();
+
+            charts.monthly = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: activeMonthLabels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            padding: 12,
+                            titleFont: { family: 'Kanit', size: 14 },
+                            bodyFont: { family: 'Outfit', size: 12 },
+                            cornerRadius: 12,
+                            callbacks: {
+                                title: (items) => activeMonthLabels[items[0].dataIndex]
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Kanit', size: 10 } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(226, 232, 240, 0.5)', drawBorder: false },
+                            ticks: { font: { family: 'Outfit', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', fetchData);
+    </script>
+</body>
+
+</html>
