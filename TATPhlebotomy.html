@@ -7,7 +7,8 @@
     <title>Phlebotomy TAT Analytics | Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet text">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Kanit:wght@300;400;500;600&display=swap"
         rel="stylesheet">
@@ -55,7 +56,9 @@
             display: none;
             position: absolute;
             background-color: white;
-            min-width: 220px;
+            min-width: 100%;
+            width: max-content;
+            max-width: calc(85vw - 3rem);
             max-height: 300px;
             overflow-y: auto;
             box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
@@ -66,6 +69,7 @@
             margin-top: 0.5rem;
             animation: slideIn 0.2s ease-out;
         }
+
 
         @keyframes slideIn {
             from {
@@ -229,7 +233,15 @@
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             overflow-y: auto;
             border-right: 1px solid #f1f5f9;
+            padding: 1.5rem;
         }
+
+        @media (min-width: 768px) {
+            #filter-sidebar {
+                padding: 2rem;
+            }
+        }
+
 
         #filter-sidebar.open {
             transform: translateX(0);
@@ -282,6 +294,11 @@
         <!-- Header -->
         <header class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
             <div class="flex items-center gap-4">
+                <a href="dashboardhub.html"
+                    class="w-12 h-12 bg-white border border-slate-200 rounded-2xl flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:shadow-lg hover:shadow-indigo-50 transition-all group"
+                    title="กลับหน้าหลัก">
+                    <i class="fas fa-home text-lg group-hover:scale-110 transition-transform"></i>
+                </a>
                 <div
                     class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
                     <i class="fas fa-microscope text-2xl"></i>
@@ -301,17 +318,14 @@
                     <i class="fas fa-sliders-h"></i> Filters
                 </button>
                 <div class="flex flex-col items-end">
-                    <div id="row-count"
-                        class="text-[10px] font-bold text-indigo-500 uppercase tracking-widest text-right">
-                    </div>
                 </div>
             </div>
         </header>
 
         <!-- Filter Sidebar -->
         <div id="filter-overlay" class="filter-overlay" onclick="toggleSidebar()"></div>
-        <aside id="filter-sidebar" class="p-8 space-y-8">
-            <div class="flex items-center justify-between mb-4">
+        <aside id="filter-sidebar" class="space-y-6 md:space-y-8">
+            <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
                         <i class="fas fa-filter"></i>
@@ -324,8 +338,68 @@
                 </button>
             </div>
 
-            <div class="space-y-8">
-                <!-- Time Range Slider -->
+            <div class="space-y-6">
+                <!-- Dropdown Filters -->
+                <div class="space-y-5">
+                    <!-- Day of Week (Moved to Top) -->
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">วันในสัปดาห์</label>
+                        <div class="filter-dropdown" id="group-dow">
+                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-dow')">
+                                <span>วัน: ทั้งหมด</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                            </button>
+                            <div class="filter-content" id="content-dow"></div>
+                        </div>
+                    </div>
+
+                    <!-- Month & Year -->
+                    <div class="space-y-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">เดือน &
+                            ปี</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="filter-dropdown" id="group-month">
+                                <button class="filter-btn" onclick="toggleDropdown(event, 'group-month')">
+                                    <span>เดือน: ทั้งหมด</span>
+                                    <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                                </button>
+                                <div class="filter-content" id="content-month"></div>
+                            </div>
+                            <div class="filter-dropdown" id="group-year">
+                                <button class="filter-btn" onclick="toggleDropdown(event, 'group-year')">
+                                    <span>ปี: ทั้งหมด</span>
+                                    <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                                </button>
+                                <div class="filter-content" id="content-year"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Queue & Day Type -->
+                    <div class="space-y-2">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">หมวดหมู่ข้อมูล</label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div class="filter-dropdown" id="group-queue">
+                                <button class="filter-btn" onclick="toggleDropdown(event, 'group-queue')">
+                                    <span>คิว: ทั้งหมด</span>
+                                    <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                                </button>
+                                <div class="filter-content" id="content-queue"></div>
+                            </div>
+                            <div class="filter-dropdown" id="group-daytype">
+                                <button class="filter-btn" onclick="toggleDropdown(event, 'group-daytype')">
+                                    <span>วันทำงาน: ทั้งหมด</span>
+                                    <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
+                                </button>
+                                <div class="filter-content" id="content-daytype"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Range Slider (Moved to bottom of list) -->
                 <div class="flex flex-col gap-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
                     <div class="flex justify-between items-center">
                         <label
@@ -340,59 +414,6 @@
                         <input type="range" min="0" max="48" value="48" class="range-input" id="max-time">
                     </div>
                     <p class="text-[10px] text-slate-400 text-center italic">เลื่อนเพื่อ Zoom กราฟเฉพาะช่วงเวลา</p>
-                </div>
-
-                <!-- Dropdown Filters -->
-                <div class="space-y-6">
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">เวลา &
-                            วัน</label>
-                        <div class="filter-dropdown" id="group-year">
-                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-year')">
-                                <span>ปี: ทั้งหมด</span>
-                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
-                            </button>
-                            <div class="filter-content" id="content-year"></div>
-                        </div>
-                        <div class="filter-dropdown" id="group-month">
-                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-month')">
-                                <span>เดือน: ทั้งหมด</span>
-                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
-                            </button>
-                            <div class="filter-content" id="content-month"></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label
-                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">หมวดหมู่ข้อมูล</label>
-                        <div class="filter-dropdown" id="group-queue">
-                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-queue')">
-                                <span>คิว: ทั้งหมด</span>
-                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
-                            </button>
-                            <div class="filter-content" id="content-queue"></div>
-                        </div>
-                        <div class="filter-dropdown" id="group-daytype">
-                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-daytype')">
-                                <span>วันทำงาน: ทั้งหมด</span>
-                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
-                            </button>
-                            <div class="filter-content" id="content-daytype"></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label
-                            class="text-[10px] font-bold text-slate-400 uppercase tracking-[0.1em]">วันในสัปดาห์</label>
-                        <div class="filter-dropdown" id="group-dow">
-                            <button class="filter-btn" onclick="toggleDropdown(event, 'group-dow')">
-                                <span>วัน: ทั้งหมด</span>
-                                <i class="fas fa-chevron-down text-[10px] text-slate-400"></i>
-                            </button>
-                            <div class="filter-content" id="content-dow"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <button onclick="resetFilters()"
@@ -459,9 +480,12 @@
         <div class="glass-card p-8 border border-white/50">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h3 class="text-lg font-bold text-slate-800">Operational Pulse</h3>
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">ปริมาณงานและประสิทธิภาพราย
-                        30 นาที</p>
+                    <h3 class="text-lg font-bold text-slate-800">จำนวนผู้ใช้บริการห้องเจาะเลือดและเวลารอคอย</h3>
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+                        เวลาตั้งแต่รับคิวถึงเจาะเลือดเสร็จสิ้น</p>
+                    <div id="active-filters-display" class="mt-3 flex flex-wrap gap-1.5 min-h-[24px]">
+                        <!-- Tags will be injected here -->
+                    </div>
                 </div>
                 <div class="flex items-center gap-3">
                     <button id="toggle-ds-0" onclick="toggleDataset(0)"
@@ -485,9 +509,10 @@
         <div class="glass-card p-8 border border-white/50">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
-                    <h3 class="text-lg font-bold text-slate-800">Monthly Patient Volume Trend</h3>
-                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                        ปริมาณผู้รับบริการรวมรายเดือน (ตามเงื่อนไขที่เลือก)</p>
+                    <h3 class="text-lg font-bold text-slate-800"> จำนวนผู้ใช้บริการห้องเจาะเลือดรายเดือน</h3>
+                    <div id="monthly-filters-display" class="mt-3 flex flex-wrap gap-1.5 min-h-[24px]">
+                        <!-- Tags will be injected here -->
+                    </div>
                 </div>
                 <div id="monthly-legend" class="flex flex-wrap items-center gap-3">
                     <!-- Dynamic Year Buttons injected here -->
@@ -505,8 +530,8 @@
         <div class="glass-card p-10 flex flex-col items-center gap-4">
             <div class="loader"></div>
             <div class="text-center">
-                <p class="text-slate-800 font-bold uppercase tracking-widest text-sm">Processing Intelligence</p>
-                <p class="text-slate-400 text-[10px] font-bold">กำลังประมวลผลข้อมูลจากระบบ...</p>
+                <p class="text-slate-800 font-bold uppercase tracking-widest text-sm">Loading...</p>
+                <p class="text-slate-400 text-[10px] font-bold">กำลังประมวลผลข้อมูล...</p>
             </div>
         </div>
     </div>
@@ -751,10 +776,66 @@
             document.getElementById('total-patients').innerText = totalPatients.toLocaleString();
             document.getElementById('avg-tat').innerText = totalPatients > 0 ? (totalTatWeight / totalPatients).toFixed(2) : '0.00';
             document.getElementById('peak-period').innerText = peak.count > 0 ? peak.fullLabel : 'ไม่มีข้อมูลในที่เลือก';
-            document.getElementById('row-count').innerText = `DATA FOCUS: ${indexToTimeStr(rangeTime.min)} - ${indexToTimeStr(rangeTime.max)}`;
 
             renderDualChart(periodEntries);
             renderMonthlyTrend(filteredData);
+            updateFilterSummary();
+        }
+
+        function updateFilterSummary() {
+            const containers = ['active-filters-display', 'monthly-filters-display'];
+
+            containers.forEach(containerId => {
+                const container = document.getElementById(containerId);
+                if (!container) return;
+                container.innerHTML = '';
+
+                const labelMap = { year: 'ปี', month: 'เดือน', queue: 'คิว', dow: 'วัน', daytype: 'ประเภทวัน' };
+                const iconMap = { year: 'calendar', month: 'calendar-alt', queue: 'users', dow: 'calendar-day', daytype: 'briefcase' };
+
+                let totalFilters = 0;
+
+                Object.entries(selections).forEach(([key, set]) => {
+                    // Special case: Monthly chart might ignore 'month' filter if it shows all months
+                    // But the request says "ตามเงื่อนไขที่เลือก", so we show everything selected.
+                    if (set.size > 0) {
+                        totalFilters++;
+                        const values = Array.from(set).join(', ');
+                        const tag = document.createElement('div');
+                        tag.className = "flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all animate-in fade-in zoom-in duration-300";
+                        tag.innerHTML = `<i class="fas fa-${iconMap[key]} text-[8px]"></i> <span>${labelMap[key]}: ${values}</span><button onclick="clearFilterGroup('${key}')" class="hover:text-rose-500 ml-1"><i class="fas fa-times"></i></button>`;
+                        container.appendChild(tag);
+                    }
+                });
+
+                // Always show time range if it's not default (0-48)
+                if (rangeTime.min > 0 || rangeTime.max < 48) {
+                    totalFilters++;
+                    const tag = document.createElement('div');
+                    tag.className = "flex items-center gap-1.5 px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-100 rounded-md text-[10px] font-bold uppercase tracking-wider animate-in fade-in zoom-in duration-300";
+                    tag.innerHTML = `<i class="fas fa-clock text-[8px]"></i> <span>เวลา: ${indexToTimeStr(rangeTime.min)} - ${indexToTimeStr(rangeTime.max)}</span><button onclick="resetTimeRange()" class="hover:text-rose-500 ml-1"><i class="fas fa-times"></i></button>`;
+                    container.appendChild(tag);
+                }
+
+                if (totalFilters === 0) {
+                    container.innerHTML = `<span class="text-[10px] text-slate-400 italic font-medium flex items-center gap-1.5"><i class="fas fa-info-circle text-[8px]"></i> แสดงข้อมูลทั้งหมด (No filters applied)</span>`;
+                }
+            });
+        }
+
+        function clearFilterGroup(type) {
+            selections[type].clear();
+            // Uncheck checkboxes
+            document.querySelectorAll(`#content-${type} input[type="checkbox"]`).forEach(i => i.checked = false);
+            const labelMap = { year: 'ปี', month: 'เดือน', queue: 'คิว', dow: 'วัน', daytype: 'ประเภทวัน' };
+            updateButtonText(type, labelMap[type]);
+            processAndRender(rawData);
+        }
+
+        function resetTimeRange() {
+            minInput.value = 0;
+            maxInput.value = 48;
+            updateSliderUI();
         }
 
         function toggleDataset(index) {
@@ -798,7 +879,8 @@
                             borderRadius: 6,
                             borderWidth: 0,
                             yAxisID: 'y',
-                            hidden: !prevVisibility[0]
+                            hidden: !prevVisibility[0],
+                            order: 2 // Higher order = drawn first (bottom)
                         },
                         {
                             label: 'TAT เฉลี่ย (นาที)',
@@ -812,7 +894,8 @@
                             pointRadius: 0,
                             pointHoverRadius: 6,
                             pointBackgroundColor: '#f97316',
-                            hidden: !prevVisibility[1]
+                            hidden: !prevVisibility[1],
+                            order: 1 // Lower order = drawn last (top)
                         }
                     ]
                 },
@@ -930,12 +1013,13 @@
                     label: `ปี ${year}`,
                     data: filteredData,
                     borderColor: color,
-                    backgroundColor: 'transparent',
+                    backgroundColor: hexToRgba(color, 0.1),
                     borderWidth: 3,
                     tension: 0.4,
                     pointRadius: 4,
                     pointHoverRadius: 6,
                     pointBackgroundColor: color,
+                    fill: true,
                     hidden: false
                 };
             });
@@ -959,8 +1043,17 @@
             const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
             if (charts.monthly) charts.monthly.destroy();
 
+            function hexToRgba(hex, alpha) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
             charts.monthly = new Chart(ctx, {
                 type: 'line',
+                plugins: [ChartDataLabels],
+
                 data: {
                     labels: activeMonthLabels,
                     datasets: datasets
@@ -979,6 +1072,14 @@
                             callbacks: {
                                 title: (items) => activeMonthLabels[items[0].dataIndex]
                             }
+                        },
+                        datalabels: {
+                            display: true,
+                            align: 'top',
+                            offset: 5,
+                            font: { family: 'Outfit', size: 10, weight: 'bold' },
+                            color: (context) => context.dataset.borderColor,
+                            formatter: (value) => value > 0 ? value.toLocaleString() : ''
                         }
                     },
                     scales: {
